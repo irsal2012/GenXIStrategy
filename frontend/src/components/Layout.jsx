@@ -30,6 +30,7 @@ import {
   TrendingUp as TrendingUpIcon,
   AccountBalance as AccountBalanceIcon,
   Warning as WarningIcon,
+  Summarize as SummarizeIcon,
 } from '@mui/icons-material'
 import { logout } from '../store/slices/authSlice'
 
@@ -73,6 +74,10 @@ function Layout() {
     { text: 'Post-Implementation Reviews', icon: <AssessmentIcon />, path: '/benefits/reviews' },
   ]
 
+  const reportingMenuItems = [
+    { text: 'Executive Reporting', icon: <SummarizeIcon />, path: '/reporting' },
+  ]
+
   const drawer = (
     <div>
       <Toolbar>
@@ -111,6 +116,20 @@ function Layout() {
           <ListItemText primary="Benefits Realization" primaryTypographyProps={{ fontWeight: 'bold', fontSize: '0.875rem' }} />
         </ListItem>
         {benefitsMenuItems.map((item) => (
+          <ListItem key={item.text} disablePadding>
+            <ListItemButton onClick={() => navigate(item.path)}>
+              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.text} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+      <Divider />
+      <List>
+        <ListItem>
+          <ListItemText primary="Executive Reporting" primaryTypographyProps={{ fontWeight: 'bold', fontSize: '0.875rem' }} />
+        </ListItem>
+        {reportingMenuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton onClick={() => navigate(item.path)}>
               <ListItemIcon>{item.icon}</ListItemIcon>

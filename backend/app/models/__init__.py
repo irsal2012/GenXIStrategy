@@ -15,6 +15,11 @@ from app.models.benefits import (
     ValueLeakage, PostImplementationReview, KPICategory, MeasurementFrequency,
     BenefitType, BenefitStatus, LeakageStatus, LeakageSeverity, PIRStatus
 )
+from app.models.reporting import (
+    ExecutiveDashboard, BoardReport, StrategyBrief, QuarterlyReport,
+    ReportingMetric, NarrativeTemplate, ReportSchedule,
+    DashboardType, ReportType, ReportStatus, MetricType, ExportFormat
+)
 
 __all__ = [
     "User",
@@ -60,4 +65,16 @@ __all__ = [
     "LeakageStatus",
     "LeakageSeverity",
     "PIRStatus",
+    "ExecutiveDashboard",
+    "BoardReport",
+    "StrategyBrief",
+    "QuarterlyReport",
+    "ReportingMetric",
+    "NarrativeTemplate",
+    "ReportSchedule",
+    "DashboardType",
+    "ReportType",
+    "ReportStatus",
+    "MetricType",
+    "ExportFormat",
 ]

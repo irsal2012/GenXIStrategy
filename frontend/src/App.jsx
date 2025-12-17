@@ -18,6 +18,7 @@ import KPITracking from './pages/KPITracking'
 import BenefitsDashboard from './pages/BenefitsDashboard'
 import ValueLeakageDetector from './pages/ValueLeakageDetector'
 import PostImplementationReviews from './pages/PostImplementationReviews'
+import ExecutiveReporting from './pages/ExecutiveReporting'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated)
@@ -52,6 +53,7 @@ function App() {
           <Route path="benefits/dashboard" element={<BenefitsDashboard />} />
           <Route path="benefits/leakage" element={<ValueLeakageDetector />} />
           <Route path="benefits/reviews" element={<PostImplementationReviews />} />
+          <Route path="reporting" element={<ExecutiveReporting />} />
         </Route>
       </Routes>
     </Box>
