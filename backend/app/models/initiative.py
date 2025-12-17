@@ -77,3 +77,4 @@ class Initiative(Base):
     milestones = relationship("Milestone", back_populates="initiative", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="initiative", cascade="all, delete-orphan")
     attachments = relationship("Attachment", back_populates="initiative", cascade="all, delete-orphan")
+    scores = relationship("InitiativeScore", back_populates="initiative", cascade="all, delete-orphan")

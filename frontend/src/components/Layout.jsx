@@ -23,6 +23,8 @@ import {
   Security as SecurityIcon,
   Logout as LogoutIcon,
   AddCircle as AddCircleIcon,
+  EmojiEvents as EmojiEventsIcon,
+  PieChart as PieChartIcon,
 } from '@mui/icons-material'
 import { logout } from '../store/slices/authSlice'
 
@@ -46,6 +48,8 @@ function Layout() {
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'New Intake', icon: <AddCircleIcon />, path: '/intake' },
     { text: 'Initiatives', icon: <AssignmentIcon />, path: '/initiatives' },
+    { text: 'Portfolio Rankings', icon: <EmojiEventsIcon />, path: '/portfolio/rankings' },
+    { text: 'Portfolio Balance', icon: <PieChartIcon />, path: '/portfolio/balance' },
     { text: 'Analytics', icon: <AssessmentIcon />, path: '/analytics' },
     { text: 'Governance', icon: <SecurityIcon />, path: '/governance' },
   ]
