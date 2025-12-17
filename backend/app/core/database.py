@@ -11,6 +11,29 @@ engine = create_engine(
     echo=settings.ENVIRONMENT == "development"
 )
 
+# Ensure schema is up to date for local development when using SQLite.
+# This is a lightweight fallback in lieu of migrations.
+# It adds missing columns without dropping data.
+if settings.DATABASE_URL.startswith("sqlite"):
+    from sqlalchemy import text
+
+    with engine.begin() as conn:
+        cols = {
+            row[1]
+            for row in conn.execute(text("PRAGMA table_info(initiatives)"))
+        }
+
+        def _add_col(name: str, ddl_type: str) -> None:
+            if name not in cols:
+                conn.execute(text(f"ALTER TABLE initiatives ADD COLUMN {name} {ddl_type}"))
+
+        # Keep in sync with Initiative model (backend/app/models/initiative.py)
+        _add_col("ai_type", "VARCHAR(20)")
+        _add_col("strategic_domain", "VARCHAR(100)")
+        _add_col("business_function", "VARCHAR(100)")
+        _add_col("data_sources", "JSON")
+        _add_col("stakeholders", "JSON")
+
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

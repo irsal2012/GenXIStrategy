@@ -1,9 +1,10 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import axios from 'axios'
+import axiosInstance from '../../api/axios'
 
-const API_URL = '/api/v1/auth'
+const API_URL = '/auth'
 
-// Note: We use regular axios here (not axiosInstance) because auth endpoints don't require token
+// Note: we still use the shared axios instance so dev/prod baseURL/proxy behavior is consistent.
+// The auth routes ignore missing Authorization headers.
 
 // Async thunks
 export const login = createAsyncThunk(
@@ -14,7 +15,7 @@ export const login = createAsyncThunk(
       formData.append('username', email)
       formData.append('password', password)
       
-      const response = await axios.post(`${API_URL}/login`, formData)
+      const response = await axiosInstance.post(`${API_URL}/login`, formData)
       localStorage.setItem('token', response.data.access_token)
       return response.data
     } catch (error) {
@@ -27,7 +28,7 @@ export const register = createAsyncThunk(
   'auth/register',
   async (userData, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/register`, userData)
+      const response = await axiosInstance.post(`${API_URL}/register`, userData)
       return response.data
     } catch (error) {
       return rejectWithValue(error.response?.data?.detail || 'Registration failed')

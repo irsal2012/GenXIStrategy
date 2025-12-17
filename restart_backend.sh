@@ -42,14 +42,19 @@ else
     echo -e "${GREEN}Attempted to stop any running uvicorn processes.${NC}"
 fi
 
-# Start the backend using run_backend.sh
+# Start the backend
 echo -e "${GREEN}Starting fresh backend instance...${NC}"
 echo ""
 
-# Make sure run_backend.sh is executable
-if [ ! -x "./run_backend.sh" ]; then
-    chmod +x ./run_backend.sh
+# Navigate to backend directory and start uvicorn
+cd backend
+
+# Check if virtual environment exists
+if [ -d "venv" ]; then
+    echo -e "${YELLOW}Activating virtual environment...${NC}"
+    source venv/bin/activate
 fi
 
-# Execute run_backend.sh
-exec ./run_backend.sh
+# Start uvicorn with reload
+echo -e "${GREEN}Starting uvicorn server...${NC}"
+exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

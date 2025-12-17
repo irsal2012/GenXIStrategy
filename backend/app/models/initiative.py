@@ -21,6 +21,13 @@ class InitiativePriority(str, enum.Enum):
     LOW = "low"
 
 
+class AIType(str, enum.Enum):
+    GENAI = "genai"
+    PREDICTIVE = "predictive"
+    OPTIMIZATION = "optimization"
+    AUTOMATION = "automation"
+
+
 class Initiative(Base):
     __tablename__ = "initiatives"
 
@@ -30,6 +37,12 @@ class Initiative(Base):
     business_objective = Column(Text)
     status = Column(Enum(InitiativeStatus), nullable=False, default=InitiativeStatus.IDEATION)
     priority = Column(Enum(InitiativePriority), nullable=False, default=InitiativePriority.MEDIUM)
+    
+    # Module 1: Taxonomy fields
+    ai_type = Column(Enum(AIType))
+    strategic_domain = Column(String(100))  # e.g., "Customer Experience", "Operations"
+    business_function = Column(String(100))  # e.g., "Marketing", "Finance", "HR"
+    data_sources = Column(JSON)  # List of data sources required
     
     # Financial
     budget_allocated = Column(Float, default=0.0)
@@ -46,6 +59,7 @@ class Initiative(Base):
     # Metadata
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     team_members = Column(JSON)  # List of user IDs
+    stakeholders = Column(JSON)  # List of stakeholder names/emails
     technologies = Column(JSON)  # List of technologies used
     tags = Column(JSON)  # List of tags
     
@@ -62,3 +76,4 @@ class Initiative(Base):
     risks = relationship("Risk", back_populates="initiative", cascade="all, delete-orphan")
     milestones = relationship("Milestone", back_populates="initiative", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="initiative", cascade="all, delete-orphan")
+    attachments = relationship("Attachment", back_populates="initiative", cascade="all, delete-orphan")

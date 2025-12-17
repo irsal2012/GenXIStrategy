@@ -48,18 +48,35 @@ function StatCard({ title, value, icon, color }) {
 
 function Dashboard() {
   const dispatch = useDispatch()
-  const { dashboardData, loading } = useSelector((state) => state.analytics)
+  const { dashboardData, loading, error } = useSelector((state) => state.analytics)
 
   useEffect(() => {
     dispatch(fetchDashboardData())
   }, [dispatch])
 
-  if (loading || !dashboardData) {
+  if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
         <CircularProgress />
       </Box>
     )
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Unable to load dashboard
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {String(error)}
+        </Typography>
+      </Box>
+    )
+  }
+
+  if (!dashboardData) {
+    return null
   }
 
   return (

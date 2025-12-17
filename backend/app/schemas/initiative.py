@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
-from app.models.initiative import InitiativeStatus, InitiativePriority
+from app.models.initiative import InitiativeStatus, InitiativePriority, AIType
 
 
 class InitiativeBase(BaseModel):
@@ -10,6 +10,13 @@ class InitiativeBase(BaseModel):
     business_objective: Optional[str] = None
     status: InitiativeStatus = InitiativeStatus.IDEATION
     priority: InitiativePriority = InitiativePriority.MEDIUM
+    
+    # Module 1: Taxonomy fields
+    ai_type: Optional[AIType] = None
+    strategic_domain: Optional[str] = None
+    business_function: Optional[str] = None
+    data_sources: Optional[List[str]] = None
+    
     budget_allocated: float = 0.0
     budget_spent: float = 0.0
     expected_roi: Optional[float] = None
@@ -19,6 +26,7 @@ class InitiativeBase(BaseModel):
     risk_score: int = 0
     strategic_alignment_score: int = 0
     team_members: Optional[List[int]] = None
+    stakeholders: Optional[List[str]] = None
     technologies: Optional[List[str]] = None
     tags: Optional[List[str]] = None
     start_date: Optional[datetime] = None
@@ -35,6 +43,13 @@ class InitiativeUpdate(BaseModel):
     business_objective: Optional[str] = None
     status: Optional[InitiativeStatus] = None
     priority: Optional[InitiativePriority] = None
+    
+    # Module 1: Taxonomy fields
+    ai_type: Optional[AIType] = None
+    strategic_domain: Optional[str] = None
+    business_function: Optional[str] = None
+    data_sources: Optional[List[str]] = None
+    
     budget_allocated: Optional[float] = None
     budget_spent: Optional[float] = None
     expected_roi: Optional[float] = None
@@ -44,6 +59,7 @@ class InitiativeUpdate(BaseModel):
     risk_score: Optional[int] = None
     strategic_alignment_score: Optional[int] = None
     team_members: Optional[List[int]] = None
+    stakeholders: Optional[List[str]] = None
     technologies: Optional[List[str]] = None
     tags: Optional[List[str]] = None
     start_date: Optional[datetime] = None
