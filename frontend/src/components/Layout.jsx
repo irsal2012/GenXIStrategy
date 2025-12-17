@@ -25,6 +25,8 @@ import {
   AddCircle as AddCircleIcon,
   EmojiEvents as EmojiEventsIcon,
   PieChart as PieChartIcon,
+  Timeline as TimelineIcon,
+  AccountTree as AccountTreeIcon,
 } from '@mui/icons-material'
 import { logout } from '../store/slices/authSlice'
 
@@ -50,6 +52,8 @@ function Layout() {
     { text: 'Initiatives', icon: <AssignmentIcon />, path: '/initiatives' },
     { text: 'Portfolio Rankings', icon: <EmojiEventsIcon />, path: '/portfolio/rankings' },
     { text: 'Portfolio Balance', icon: <PieChartIcon />, path: '/portfolio/balance' },
+    { text: 'Roadmap Timeline', icon: <TimelineIcon />, path: '/roadmap/timeline' },
+    { text: 'Dependency Graph', icon: <AccountTreeIcon />, path: '/roadmap/dependencies' },
     { text: 'Analytics', icon: <AssessmentIcon />, path: '/analytics' },
     { text: 'Governance', icon: <SecurityIcon />, path: '/governance' },
   ]

@@ -5,6 +5,7 @@ import analyticsReducer from './slices/analyticsSlice'
 import intakeReducer from './slices/intakeSlice'
 import scoringReducer from './slices/scoringSlice'
 import portfolioReducer from './slices/portfolioSlice'
+import roadmapReducer from './slices/roadmapSlice'
 
 const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ const store = configureStore({
     intake: intakeReducer,
     scoring: scoringReducer,
     portfolio: portfolioReducer,
+    roadmap: roadmapReducer,
   },
 })
 

@@ -70,6 +70,11 @@ class Initiative(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Module 3: Roadmap fields
+    roadmap_timeline_id = Column(Integer, ForeignKey("roadmap_timelines.id"), nullable=True)
+    roadmap_quarter = Column(String(10), nullable=True)  # e.g., "Q1 2024"
+    roadmap_position = Column(String(20), nullable=True)  # "now", "next", "later"
+    
     # Relationships
     owner = relationship("User", back_populates="initiatives")
     metrics = relationship("InitiativeMetric", back_populates="initiative", cascade="all, delete-orphan")
@@ -78,3 +83,9 @@ class Initiative(Base):
     comments = relationship("Comment", back_populates="initiative", cascade="all, delete-orphan")
     attachments = relationship("Attachment", back_populates="initiative", cascade="all, delete-orphan")
     scores = relationship("InitiativeScore", back_populates="initiative", cascade="all, delete-orphan")
+    
+    # Module 3: Roadmap relationships
+    roadmap_timeline = relationship("RoadmapTimeline", back_populates="initiatives")
+    dependencies = relationship("InitiativeDependency", foreign_keys="[InitiativeDependency.initiative_id]", back_populates="initiative", cascade="all, delete-orphan")
+    resource_allocations = relationship("ResourceAllocation", back_populates="initiative", cascade="all, delete-orphan")
+    stage_gates = relationship("StageGate", back_populates="initiative", cascade="all, delete-orphan")

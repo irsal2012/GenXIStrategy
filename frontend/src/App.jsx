@@ -9,6 +9,8 @@ import InitiativeDetail from './pages/InitiativeDetail'
 import IntakeForm from './pages/IntakeForm'
 import PortfolioRankings from './pages/PortfolioRankings'
 import PortfolioBalance from './pages/PortfolioBalance'
+import RoadmapTimeline from './pages/RoadmapTimeline'
+import DependencyGraph from './pages/DependencyGraph'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated)
@@ -34,6 +36,8 @@ function App() {
           <Route path="initiatives/:id" element={<InitiativeDetail />} />
           <Route path="portfolio/rankings" element={<PortfolioRankings />} />
           <Route path="portfolio/balance" element={<PortfolioBalance />} />
+          <Route path="roadmap/timeline" element={<RoadmapTimeline />} />
+          <Route path="roadmap/dependencies" element={<DependencyGraph />} />
         </Route>
       </Routes>
     </Box>

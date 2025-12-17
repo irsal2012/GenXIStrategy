@@ -119,4 +119,8 @@ const initiativesSlice = createSlice({
 })
 
 export const { selectInitiative, clearError } = initiativesSlice.actions
+
+// Export fetchInitiatives as getInitiatives for backward compatibility
+export const getInitiatives = fetchInitiatives
+
 export default initiativesSlice.reducer
