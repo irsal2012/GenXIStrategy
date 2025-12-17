@@ -10,6 +10,11 @@ from app.models.scoring import (
     ScoringModelVersion, ScoringDimension, ScoringCriteria, InitiativeScore,
     ScenarioSimulation, InitiativeComparison, DimensionType, CriteriaType
 )
+from app.models.benefits import (
+    KPIBaseline, KPIMeasurement, BenefitRealization, BenefitConfidenceScore,
+    ValueLeakage, PostImplementationReview, KPICategory, MeasurementFrequency,
+    BenefitType, BenefitStatus, LeakageStatus, LeakageSeverity, PIRStatus
+)
 
 __all__ = [
     "User",
@@ -42,4 +47,17 @@ __all__ = [
     "InitiativeComparison",
     "DimensionType",
     "CriteriaType",
+    "KPIBaseline",
+    "KPIMeasurement",
+    "BenefitRealization",
+    "BenefitConfidenceScore",
+    "ValueLeakage",
+    "PostImplementationReview",
+    "KPICategory",
+    "MeasurementFrequency",
+    "BenefitType",
+    "BenefitStatus",
+    "LeakageStatus",
+    "LeakageSeverity",
+    "PIRStatus",
 ]

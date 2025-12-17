@@ -14,6 +14,10 @@ import DependencyGraph from './pages/DependencyGraph'
 import GovernanceWorkflow from './pages/GovernanceWorkflow'
 import PolicyLibrary from './pages/PolicyLibrary'
 import EvidenceVault from './pages/EvidenceVault'
+import KPITracking from './pages/KPITracking'
+import BenefitsDashboard from './pages/BenefitsDashboard'
+import ValueLeakageDetector from './pages/ValueLeakageDetector'
+import PostImplementationReviews from './pages/PostImplementationReviews'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated)
@@ -44,6 +48,10 @@ function App() {
           <Route path="governance/workflows" element={<GovernanceWorkflow />} />
           <Route path="governance/policies" element={<PolicyLibrary />} />
           <Route path="governance/evidence" element={<EvidenceVault />} />
+          <Route path="benefits/kpis" element={<KPITracking />} />
+          <Route path="benefits/dashboard" element={<BenefitsDashboard />} />
+          <Route path="benefits/leakage" element={<ValueLeakageDetector />} />
+          <Route path="benefits/reviews" element={<PostImplementationReviews />} />
         </Route>
       </Routes>
     </Box>

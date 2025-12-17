@@ -93,3 +93,9 @@ class Initiative(Base):
     # Module 4: Governance relationships
     governance_workflow = relationship("GovernanceWorkflow", back_populates="initiative", uselist=False, cascade="all, delete-orphan")
     evidence_documents = relationship("EvidenceDocument", back_populates="initiative", cascade="all, delete-orphan")
+    
+    # Module 5: Benefits Realization relationships
+    kpi_baselines = relationship("KPIBaseline", back_populates="initiative", cascade="all, delete-orphan")
+    benefit_realizations = relationship("BenefitRealization", back_populates="initiative", cascade="all, delete-orphan")
+    value_leakages = relationship("ValueLeakage", back_populates="initiative", cascade="all, delete-orphan")
+    post_implementation_reviews = relationship("PostImplementationReview", back_populates="initiative", cascade="all, delete-orphan")

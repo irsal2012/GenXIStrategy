@@ -7,6 +7,7 @@ import scoringReducer from './slices/scoringSlice'
 import portfolioReducer from './slices/portfolioSlice'
 import roadmapReducer from './slices/roadmapSlice'
 import governanceReducer from './slices/governanceSlice'
+import benefitsReducer from './slices/benefitsSlice'
 
 const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ const store = configureStore({
     portfolio: portfolioReducer,
     roadmap: roadmapReducer,
     governance: governanceReducer,
+    benefits: benefitsReducer,
   },
 })
 

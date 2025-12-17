@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.endpoints import auth, initiatives, analytics, intake, attachments, scoring, portfolio, roadmap, governance
+from app.api.endpoints import auth, initiatives, analytics, intake, attachments, scoring, portfolio, roadmap, governance, benefits
 
 api_router = APIRouter()
 
@@ -12,3 +12,4 @@ api_router.include_router(scoring.router, prefix="/scoring", tags=["scoring"])
 api_router.include_router(portfolio.router, prefix="/portfolio", tags=["portfolio"])
 api_router.include_router(roadmap.router, prefix="/roadmap", tags=["roadmap"])
 api_router.include_router(governance.router, prefix="/governance", tags=["governance"])
+api_router.include_router(benefits.router, prefix="/benefits", tags=["benefits"])

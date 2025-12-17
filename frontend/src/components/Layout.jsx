@@ -27,6 +27,9 @@ import {
   PieChart as PieChartIcon,
   Timeline as TimelineIcon,
   AccountTree as AccountTreeIcon,
+  TrendingUp as TrendingUpIcon,
+  AccountBalance as AccountBalanceIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material'
 import { logout } from '../store/slices/authSlice'
 
@@ -63,6 +66,13 @@ function Layout() {
     { text: 'Evidence Vault', icon: <AssessmentIcon />, path: '/governance/evidence' },
   ]
 
+  const benefitsMenuItems = [
+    { text: 'KPI Tracking', icon: <TrendingUpIcon />, path: '/benefits/kpis' },
+    { text: 'Benefits Dashboard', icon: <AccountBalanceIcon />, path: '/benefits/dashboard' },
+    { text: 'Value Leakage Detector', icon: <WarningIcon />, path: '/benefits/leakage' },
+    { text: 'Post-Implementation Reviews', icon: <AssessmentIcon />, path: '/benefits/reviews' },
+  ]
+
   const drawer = (
     <div>
       <Toolbar>
@@ -87,6 +97,20 @@ function Layout() {
           <ListItemText primary="Governance" primaryTypographyProps={{ fontWeight: 'bold', fontSize: '0.875rem' }} />
         </ListItem>
         {governanceMenuItems.map((item) => (
+          <ListItem key={item.text} disablePadding>
+            <ListItemButton onClick={() => navigate(item.path)}>
+              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.text} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+      <Divider />
+      <List>
+        <ListItem>
+          <ListItemText primary="Benefits Realization" primaryTypographyProps={{ fontWeight: 'bold', fontSize: '0.875rem' }} />
+        </ListItem>
+        {benefitsMenuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton onClick={() => navigate(item.path)}>
               <ListItemIcon>{item.icon}</ListItemIcon>
