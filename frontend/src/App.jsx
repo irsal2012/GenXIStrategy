@@ -11,6 +11,9 @@ import PortfolioRankings from './pages/PortfolioRankings'
 import PortfolioBalance from './pages/PortfolioBalance'
 import RoadmapTimeline from './pages/RoadmapTimeline'
 import DependencyGraph from './pages/DependencyGraph'
+import GovernanceWorkflow from './pages/GovernanceWorkflow'
+import PolicyLibrary from './pages/PolicyLibrary'
+import EvidenceVault from './pages/EvidenceVault'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated)
@@ -38,6 +41,9 @@ function App() {
           <Route path="portfolio/balance" element={<PortfolioBalance />} />
           <Route path="roadmap/timeline" element={<RoadmapTimeline />} />
           <Route path="roadmap/dependencies" element={<DependencyGraph />} />
+          <Route path="governance/workflows" element={<GovernanceWorkflow />} />
+          <Route path="governance/policies" element={<PolicyLibrary />} />
+          <Route path="governance/evidence" element={<EvidenceVault />} />
         </Route>
       </Routes>
     </Box>

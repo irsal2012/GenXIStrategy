@@ -59,3 +59,4 @@ class Risk(Base):
     
     # Relationships
     initiative = relationship("Initiative", back_populates="risks")
+    mitigations = relationship("RiskMitigation", back_populates="risk", cascade="all, delete-orphan")

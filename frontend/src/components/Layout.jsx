@@ -55,7 +55,12 @@ function Layout() {
     { text: 'Roadmap Timeline', icon: <TimelineIcon />, path: '/roadmap/timeline' },
     { text: 'Dependency Graph', icon: <AccountTreeIcon />, path: '/roadmap/dependencies' },
     { text: 'Analytics', icon: <AssessmentIcon />, path: '/analytics' },
-    { text: 'Governance', icon: <SecurityIcon />, path: '/governance' },
+  ]
+
+  const governanceMenuItems = [
+    { text: 'Governance Workflows', icon: <SecurityIcon />, path: '/governance/workflows' },
+    { text: 'Policy Library', icon: <AssignmentIcon />, path: '/governance/policies' },
+    { text: 'Evidence Vault', icon: <AssessmentIcon />, path: '/governance/evidence' },
   ]
 
   const drawer = (
@@ -68,6 +73,20 @@ function Layout() {
       <Divider />
       <List>
         {menuItems.map((item) => (
+          <ListItem key={item.text} disablePadding>
+            <ListItemButton onClick={() => navigate(item.path)}>
+              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.text} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+      <Divider />
+      <List>
+        <ListItem>
+          <ListItemText primary="Governance" primaryTypographyProps={{ fontWeight: 'bold', fontSize: '0.875rem' }} />
+        </ListItem>
+        {governanceMenuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton onClick={() => navigate(item.path)}>
               <ListItemIcon>{item.icon}</ListItemIcon>

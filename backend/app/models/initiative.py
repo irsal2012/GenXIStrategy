@@ -89,3 +89,7 @@ class Initiative(Base):
     dependencies = relationship("InitiativeDependency", foreign_keys="[InitiativeDependency.initiative_id]", back_populates="initiative", cascade="all, delete-orphan")
     resource_allocations = relationship("ResourceAllocation", back_populates="initiative", cascade="all, delete-orphan")
     stage_gates = relationship("StageGate", back_populates="initiative", cascade="all, delete-orphan")
+    
+    # Module 4: Governance relationships
+    governance_workflow = relationship("GovernanceWorkflow", back_populates="initiative", uselist=False, cascade="all, delete-orphan")
+    evidence_documents = relationship("EvidenceDocument", back_populates="initiative", cascade="all, delete-orphan")
