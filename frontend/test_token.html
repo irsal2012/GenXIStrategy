@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Token Test</title>
+</head>
+<body>
+    <h1>Token Test</h1>
+    <button onclick="login()">Login</button>
+    <button onclick="checkToken()">Check Token</button>
+    <button onclick="testDashboard()">Test Dashboard</button>
+    <pre id="output"></pre>
+
+    <script>
+        const output = document.getElementById('output');
+
+        async function login() {
+            const formData = new FormData();
+            formData.append('username', 'admin@example.com');
+            formData.append('password', 'admin123');
+
+            try {
+                const response = await fetch('http://localhost:8000/api/v1/auth/login', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                output.textContent = 'Login Response:\n' + JSON.stringify(data, null, 2);
+                
+                if (data.access_token) {
+                    localStorage.setItem('token', data.access_token);
+                    output.textContent += '\n\nToken saved to localStorage';
+                }
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        function checkToken() {
+            const token = localStorage.getItem('token');
+            output.textContent = 'Token in localStorage:\n' + (token || 'No token found');
+        }
+
+        async function testDashboard() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                output.textContent = 'No token found. Please login first.';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:8000/api/v1/analytics/dashboard', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                output.textContent = 'Dashboard Response (' + response.status + '):\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
