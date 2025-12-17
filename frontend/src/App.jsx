@@ -6,6 +6,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import InitiativesList from './pages/InitiativesList'
 import InitiativeDetail from './pages/InitiativeDetail'
+import IntakeForm from './pages/IntakeForm'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated)
@@ -26,6 +27,7 @@ function App() {
           }
         >
           <Route index element={<Dashboard />} />
+          <Route path="intake" element={<IntakeForm />} />
           <Route path="initiatives" element={<InitiativesList />} />
           <Route path="initiatives/:id" element={<InitiativeDetail />} />
         </Route>

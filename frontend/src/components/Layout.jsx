@@ -22,6 +22,7 @@ import {
   Assessment as AssessmentIcon,
   Security as SecurityIcon,
   Logout as LogoutIcon,
+  AddCircle as AddCircleIcon,
 } from '@mui/icons-material'
 import { logout } from '../store/slices/authSlice'
 
@@ -43,6 +44,7 @@ function Layout() {
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
+    { text: 'New Intake', icon: <AddCircleIcon />, path: '/intake' },
     { text: 'Initiatives', icon: <AssignmentIcon />, path: '/initiatives' },
     { text: 'Analytics', icon: <AssessmentIcon />, path: '/analytics' },
     { text: 'Governance', icon: <SecurityIcon />, path: '/governance' },
