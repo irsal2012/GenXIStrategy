@@ -34,7 +34,7 @@ router = APIRouter()
 # Governance Workflow Endpoints
 # ============================================================================
 
-@router.post("/workflows/initialize", response_model=WorkflowInitializeResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/workflows/initialize", response_model=GovernanceWorkflowResponse, status_code=status.HTTP_201_CREATED)
 async def initialize_workflow(
     request: WorkflowInitializeRequest,
     db: Session = Depends(get_db),
@@ -43,6 +43,7 @@ async def initialize_workflow(
     """
     Initialize a governance workflow for an initiative based on risk tier.
     Creates workflow with appropriate stages (3 for low, 5 for medium, 7 for high risk).
+    Auto-starts the first stage.
     """
     try:
         workflow = GovernanceService.initialize_workflow(
@@ -51,22 +52,7 @@ async def initialize_workflow(
             risk_tier=request.risk_tier
         )
         
-        stages = GovernanceService.get_workflow_stages(db, workflow.id)
-        
-        return WorkflowInitializeResponse(
-            workflow_id=workflow.id,
-            stages_created=[
-                {
-                    "id": stage.id,
-                    "name": stage.stage_name,
-                    "order": stage.stage_order,
-                    "required_role": stage.required_role,
-                    "required_evidence": stage.required_evidence
-                }
-                for stage in stages
-            ],
-            message=f"Workflow initialized with {len(stages)} stages for {request.risk_tier} risk initiative"
-        )
+        return workflow
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

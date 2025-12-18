@@ -226,10 +226,22 @@ class OpenAIService:
         risk_tier: str
     ) -> Dict[str, Any]:
         """Check completeness of governance artifacts."""
+        if not self.api_key_configured:
+            return {
+                "success": False,
+                "error": "OpenAI API key not configured. Set OPEN_API_KEY in backend/.env.",
+                "agent": "OpenAIService",
+            }
         return await self.governance_agent.check_compliance_completeness(initiative_data, evidence_documents, risk_tier)
     
     async def map_regulations(self, initiative_data: Dict[str, Any]) -> Dict[str, Any]:
         """Map initiative to applicable regulations."""
+        if not self.api_key_configured:
+            return {
+                "success": False,
+                "error": "OpenAI API key not configured. Set OPEN_API_KEY in backend/.env.",
+                "agent": "OpenAIService",
+            }
         return await self.governance_agent.map_regulations(initiative_data)
     
     async def draft_risk_statement(
@@ -238,6 +250,12 @@ class OpenAIService:
         initiative_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Draft clear, actionable risk statements."""
+        if not self.api_key_configured:
+            return {
+                "success": False,
+                "error": "OpenAI API key not configured. Set OPEN_API_KEY in backend/.env.",
+                "agent": "OpenAIService",
+            }
         return await self.governance_agent.draft_risk_statement(risk_data, initiative_data)
     
     async def recommend_risk_controls(
@@ -246,6 +264,12 @@ class OpenAIService:
         initiative_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Recommend mitigation controls for identified risks."""
+        if not self.api_key_configured:
+            return {
+                "success": False,
+                "error": "OpenAI API key not configured. Set OPEN_API_KEY in backend/.env.",
+                "agent": "OpenAIService",
+            }
         return await self.governance_agent.recommend_risk_controls(risk_data, initiative_data)
     
     async def generate_model_card(
@@ -254,6 +278,12 @@ class OpenAIService:
         model_details: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Generate a model card template."""
+        if not self.api_key_configured:
+            return {
+                "success": False,
+                "error": "OpenAI API key not configured. Set OPEN_API_KEY in backend/.env.",
+                "agent": "OpenAIService",
+            }
         return await self.governance_agent.generate_model_card(initiative_data, model_details)
     
     # ========================================================================

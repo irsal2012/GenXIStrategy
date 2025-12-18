@@ -53,9 +53,10 @@ class GovernanceService:
         db.flush()
 
         # Create stages based on risk tier
-        stages = GovernanceService._get_stages_for_risk_tier(risk_tier)
+        stages_data = GovernanceService._get_stages_for_risk_tier(risk_tier)
+        created_stages = []
         
-        for stage_data in stages:
+        for stage_data in stages_data:
             stage = WorkflowStage(
                 workflow_id=workflow.id,
                 stage_name=stage_data["name"],
@@ -67,6 +68,18 @@ class GovernanceService:
                 status=WorkflowStatus.NOT_STARTED
             )
             db.add(stage)
+            created_stages.append(stage)
+
+        # Flush to get stage IDs
+        db.flush()
+
+        # Auto-start first stage
+        if created_stages:
+            first_stage = created_stages[0]
+            first_stage.status = WorkflowStatus.IN_PROGRESS
+            first_stage.started_at = datetime.utcnow()
+            workflow.current_stage_id = first_stage.id
+            workflow.status = WorkflowStatus.IN_PROGRESS
 
         db.commit()
         db.refresh(workflow)
@@ -266,7 +279,7 @@ class GovernanceService:
         # Get current stage
         if workflow.current_stage_id:
             current_stage = db.query(WorkflowStage).filter(WorkflowStage.id == workflow.current_stage_id).first()
-            if current_stage.status != WorkflowStatus.APPROVED:
+            if not current_stage or current_stage.status != WorkflowStatus.APPROVED:
                 return None  # Cannot advance if current stage not approved
 
         # Get next stage

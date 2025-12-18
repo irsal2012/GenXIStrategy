@@ -39,6 +39,7 @@ import {
 } from '@mui/icons-material'
 import {
   initializeWorkflow,
+  getWorkflow,
   getWorkflowByInitiative,
   getWorkflowStages,
   advanceWorkflow,
@@ -111,9 +112,12 @@ function GovernanceWorkflow() {
     if (result.type.endsWith('/fulfilled')) {
       setInitDialogOpen(false)
       setNewWorkflow({ initiativeId: '', riskTier: 'medium' })
-      // Refresh workflow data
-      if (newWorkflow.initiativeId) {
-        dispatch(getWorkflowByInitiative(newWorkflow.initiativeId))
+      // Refresh workflow data - the workflow is now auto-started
+      if (result.payload?.id) {
+        // Fetch the full workflow details
+        await dispatch(getWorkflow(result.payload.id))
+        // Fetch all stages
+        await dispatch(getWorkflowStages(result.payload.id))
       }
     }
   }
@@ -292,7 +296,11 @@ function GovernanceWorkflow() {
                   Risk Tier: <strong>{currentWorkflow.risk_tier}</strong>
                 </Typography>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Current Stage: <strong>{currentWorkflow.current_stage_name || 'N/A'}</strong>
+                  Current Stage: <strong>{
+                    currentWorkflow.current_stage_id && workflowStages.length > 0
+                      ? workflowStages.find(s => s.id === currentWorkflow.current_stage_id)?.stage_name || 'N/A'
+                      : 'N/A'
+                  }</strong>
                 </Typography>
                 <Box sx={{ mt: 2 }}>
                   <Button
