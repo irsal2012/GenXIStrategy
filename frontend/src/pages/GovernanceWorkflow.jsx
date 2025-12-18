@@ -217,6 +217,19 @@ function GovernanceWorkflow() {
 
   const displayError = workflowError || stagesError || approvalsError || aiError
 
+  // Format error message properly
+  const formatError = (error) => {
+    if (typeof error === 'string') return error
+    if (error && typeof error === 'object') {
+      // Handle validation errors from backend
+      if (Array.isArray(error)) {
+        return error.map(e => e.msg || JSON.stringify(e)).join(', ')
+      }
+      return JSON.stringify(error)
+    }
+    return 'An error occurred'
+  }
+
   return (
     <Box>
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -228,7 +241,7 @@ function GovernanceWorkflow() {
 
       {displayError && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {displayError}
+          {formatError(displayError)}
         </Alert>
       )}
 

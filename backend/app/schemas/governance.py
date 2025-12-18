@@ -174,7 +174,8 @@ class WorkflowStageResponse(WorkflowStageBase):
 
 class WorkflowApprovalBase(BaseModel):
     stage_id: int
-    approver_id: int
+    approver_id: Optional[int] = None
+    approver_role: Optional[str] = None
     decision: ApprovalDecision = ApprovalDecision.PENDING
     comments: Optional[str] = None
     conditions: Optional[str] = None

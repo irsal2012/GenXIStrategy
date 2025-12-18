@@ -131,7 +131,8 @@ class WorkflowApproval(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     stage_id = Column(Integer, ForeignKey("workflow_stages.id"), nullable=False)
-    approver_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    approver_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    approver_role = Column(String(100), nullable=True)  # Role of approver (for tracking)
     decision = Column(Enum(ApprovalDecision), nullable=False, default=ApprovalDecision.PENDING)
     comments = Column(Text)
     conditions = Column(Text)  # For "approved with conditions"

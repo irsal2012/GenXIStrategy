@@ -62,6 +62,7 @@ function App() {
           <Route path="portfolio/balance" element={<PortfolioBalance />} />
           <Route path="roadmap/timeline" element={<RoadmapTimeline />} />
           <Route path="roadmap/dependencies" element={<DependencyGraph />} />
+          <Route path="governance" element={<GovernanceWorkflow />} />
           <Route path="governance/workflows" element={<GovernanceWorkflow />} />
           <Route path="governance/policies" element={<PolicyLibrary />} />
           <Route path="governance/evidence" element={<EvidenceVault />} />
