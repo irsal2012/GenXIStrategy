@@ -469,7 +469,8 @@ alembic upgrade head
 ### Environment Variables:
 Ensure `backend/.env` has:
 ```
-OPENAI_API_KEY=your_openai_api_key
+OPEN_API_KEY=your_openai_api_key
+# (legacy) OPENAI_API_KEY is also supported
 OPENAI_MODEL=gpt-4-turbo-preview
 ```
 

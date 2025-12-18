@@ -9,6 +9,10 @@ from openai import OpenAI
 from app.core.config import settings
 from typing import Optional, Dict, Any, List
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 # Import all agents
 from app.agents import (
     IntakeAgent,
@@ -28,8 +32,21 @@ class OpenAIService:
     """
     
     def __init__(self):
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        # If the key is left as the placeholder value, calls to OpenAI will fail.
+        # In that case we still want the API to respond quickly and clearly
+        # (instead of the UI appearing to hang on "Parsing...").
+        self.api_key_configured = bool(settings.openai_api_key) and (
+            "your-openai-api-key-here" not in settings.openai_api_key
+        )
+
+        self.client = OpenAI(api_key=settings.openai_api_key)
         self.model = settings.OPENAI_MODEL
+
+        if not self.api_key_configured:
+            logger.warning(
+                "OpenAI API key is not configured (placeholder detected). "
+                "Set OPEN_API_KEY in backend/.env to enable AI features."
+            )
         
         # Initialize all agents
         self.intake_agent = IntakeAgent(self.client, self.model)
@@ -82,14 +99,32 @@ class OpenAIService:
     
     async def parse_unstructured_intake(self, text: str) -> Dict[str, Any]:
         """Parse unstructured text into structured initiative data."""
+        if not self.api_key_configured:
+            return {
+                "success": False,
+                "error": "OpenAI API key not configured. Set OPEN_API_KEY in backend/.env.",
+                "agent": "OpenAIService",
+            }
         return await self.intake_agent.parse_unstructured_intake(text)
     
     async def detect_missing_fields(self, initiative_data: Dict[str, Any]) -> Dict[str, Any]:
         """Detect missing required fields and generate follow-up questions."""
+        if not self.api_key_configured:
+            return {
+                "success": False,
+                "error": "OpenAI API key not configured. Set OPEN_API_KEY in backend/.env.",
+                "agent": "OpenAIService",
+            }
         return await self.intake_agent.detect_missing_fields(initiative_data)
     
     async def classify_use_case(self, initiative_data: Dict[str, Any]) -> Dict[str, Any]:
         """Automatically classify the AI use case."""
+        if not self.api_key_configured:
+            return {
+                "success": False,
+                "error": "OpenAI API key not configured. Set OPEN_API_KEY in backend/.env.",
+                "agent": "OpenAIService",
+            }
         return await self.intake_agent.classify_use_case(initiative_data)
     
     async def find_similar_initiatives(
@@ -98,6 +133,12 @@ class OpenAIService:
         existing_initiatives: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Find similar existing initiatives."""
+        if not self.api_key_configured:
+            return {
+                "success": False,
+                "error": "OpenAI API key not configured. Set OPEN_API_KEY in backend/.env.",
+                "agent": "OpenAIService",
+            }
         return await self.intake_agent.find_similar_initiatives(initiative_data, existing_initiatives)
     
     # ========================================================================

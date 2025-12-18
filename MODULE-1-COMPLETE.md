@@ -248,7 +248,8 @@ To test Module 1:
 
 Make sure the following environment variables are set in `backend/.env`:
 ```
-OPENAI_API_KEY=your_openai_api_key
+OPEN_API_KEY=your_openai_api_key
+# (legacy) OPENAI_API_KEY is also supported
 OPENAI_MODEL=gpt-4-turbo-preview
 ```
 

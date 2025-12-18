@@ -180,10 +180,11 @@ const IntakeForm = () => {
         setError('Failed to parse text. Please try again.');
       }
     } catch (err) {
-      // Backend returns { success: false, error: "..." } for AI failures (e.g., OpenAI quota)
+      // Backend returns HTTP 502 with detail, or a JSON error payload.
       const backendMessage = err.response?.data?.detail || err.response?.data?.error;
       setError(backendMessage || 'Failed to parse text');
     } finally {
+      // Defensive: ensure we never leave the UI stuck in "Parsing..."
       setParsing(false);
     }
   };

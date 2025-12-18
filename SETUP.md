@@ -18,7 +18,8 @@ cd UPM
 cp .env.example .env
 
 # Edit .env and add your OpenAI API key
-# OPENAI_API_KEY=your-actual-api-key-here
+# OPEN_API_KEY=your-actual-api-key-here
+# (legacy) OPENAI_API_KEY is also supported
 ```
 
 ### 2. Start the Application
@@ -104,7 +105,8 @@ Frontend will be available at http://localhost:3000
 
 ### Required Variables
 
-- `OPENAI_API_KEY`: Your OpenAI API key (required for AI features)
+- `OPEN_API_KEY`: Your OpenAI API key (required for AI features)
+  - (legacy) `OPENAI_API_KEY` is also supported
 
 ### Optional Variables
 
