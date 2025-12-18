@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useDispatch, useSelector } from 'react-redux'
+import { useSelector } from 'react-redux'
 import {
   Box,
   Typography,
@@ -59,6 +59,7 @@ function TabPanel({ children, value, index, ...other }) {
 function InitiativeDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { isAuthenticated } = useSelector((state) => state.auth)
   const [initiative, setInitiative] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -68,8 +69,12 @@ function InitiativeDetail() {
   const [milestones, setMilestones] = useState([])
 
   useEffect(() => {
-    fetchInitiativeDetails()
-  }, [id])
+    if (isAuthenticated) {
+      fetchInitiativeDetails()
+    } else {
+      setLoading(false)
+    }
+  }, [id, isAuthenticated])
 
   const fetchInitiativeDetails = async () => {
     try {
@@ -95,7 +100,8 @@ function InitiativeDetail() {
 
   const fetchBenefits = async () => {
     try {
-      const response = await axiosInstance.get(`/benefits/initiative/${id}`)
+      // Backend route is: /benefits/realizations/initiative/{initiative_id}
+      const response = await axiosInstance.get(`/benefits/realizations/initiative/${id}`)
       setBenefits(response.data)
     } catch (err) {
       console.error('Failed to fetch benefits:', err)
@@ -104,8 +110,9 @@ function InitiativeDetail() {
 
   const fetchRisks = async () => {
     try {
-      const response = await axiosInstance.get(`/governance/risks?initiative_id=${id}`)
-      setRisks(response.data)
+      // NOTE: there is no backend endpoint for listing risks by initiative yet.
+      // Avoid calling a non-existent route that could trigger auth handling.
+      setRisks([])
     } catch (err) {
       console.error('Failed to fetch risks:', err)
     }
@@ -113,8 +120,19 @@ function InitiativeDetail() {
 
   const fetchMilestones = async () => {
     try {
-      const response = await axiosInstance.get(`/roadmap/milestones?initiative_id=${id}`)
-      setMilestones(response.data)
+      // Backend route for initiative milestones is stage-gates:
+      // /roadmap/stage-gates/initiative/{initiative_id}
+      const response = await axiosInstance.get(`/roadmap/stage-gates/initiative/${id}`)
+      // Map to the UI table expectations
+      const rows = (response.data || []).map((sg) => ({
+        id: sg.id,
+        title: sg.stage_name,
+        description: sg.description,
+        target_date: sg.target_date,
+        status: sg.status,
+        progress_percentage: sg.progress_percentage ?? 0,
+      }))
+      setMilestones(rows)
     } catch (err) {
       console.error('Failed to fetch milestones:', err)
     }
@@ -174,6 +192,19 @@ function InitiativeDetail() {
   const calculateBudgetProgress = () => {
     if (!initiative?.budget_allocated || initiative.budget_allocated === 0) return 0
     return (initiative.budget_spent / initiative.budget_allocated) * 100
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Box>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Please log in to view initiative details.
+        </Alert>
+        <Button startIcon={<ArrowBack />} onClick={() => navigate('/login')}>
+          Go to Login
+        </Button>
+      </Box>
+    )
   }
 
   if (loading) {

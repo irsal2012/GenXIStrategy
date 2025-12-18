@@ -71,6 +71,7 @@ function Login() {
                   id="email"
                   name="email"
                   label="Email Address"
+                  autoComplete="username"
                   value={values.email}
                   onChange={handleChange}
                   onBlur={handleBlur}
@@ -84,6 +85,7 @@ function Login() {
                   name="password"
                   label="Password"
                   type="password"
+                  autoComplete="current-password"
                   value={values.password}
                   onChange={handleChange}
                   onBlur={handleBlur}

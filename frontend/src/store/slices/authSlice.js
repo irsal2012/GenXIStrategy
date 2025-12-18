@@ -52,6 +52,14 @@ const authSlice = createSlice({
       state.isAuthenticated = false
       localStorage.removeItem('token')
     },
+    // Used by global axios 401 handler (and any other auth-expiry detection)
+    // to keep Redux state in sync with localStorage.
+    logoutFromAuthEvent: (state) => {
+      state.user = null
+      state.token = null
+      state.isAuthenticated = false
+      state.error = null
+    },
     clearError: (state) => {
       state.error = null
     },
@@ -88,5 +96,5 @@ const authSlice = createSlice({
   },
 })
 
-export const { logout, clearError } = authSlice.actions
+export const { logout, logoutFromAuthEvent, clearError } = authSlice.actions
 export default authSlice.reducer

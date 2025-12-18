@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { useSelector } from 'react-redux'
+import { useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import { logoutFromAuthEvent } from './store/slices/authSlice'
 import { Box } from '@mui/material'
 import Layout from './components/Layout'
 import Login from './pages/Login'
@@ -30,6 +32,14 @@ function PrivateRoute({ children }) {
 }
 
 function App() {
+  const dispatch = useDispatch()
+
+  useEffect(() => {
+    const handler = () => dispatch(logoutFromAuthEvent())
+    window.addEventListener('auth:logout', handler)
+    return () => window.removeEventListener('auth:logout', handler)
+  }, [dispatch])
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <Routes>

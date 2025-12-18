@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import axiosInstance from '../../api/axios'
 
-const API_URL = '/initiatives'
+const API_URL = '/initiatives/'
 
 // Async thunks
 export const fetchInitiatives = createAsyncThunk(
@@ -11,7 +11,10 @@ export const fetchInitiatives = createAsyncThunk(
       const response = await axiosInstance.get(API_URL)
       return response.data
     } catch (error) {
-      return rejectWithValue(error.response?.data?.detail || 'Failed to fetch initiatives')
+      // Prefer server-provided message; fall back to network error message.
+      return rejectWithValue(
+        error.response?.data?.detail || error.message || 'Failed to fetch initiatives'
+      )
     }
   }
 )

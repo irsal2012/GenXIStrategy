@@ -25,8 +25,9 @@ function InitiativesList() {
   const { isAuthenticated } = useSelector((state) => state.auth)
 
   useEffect(() => {
-    // Avoid spamming protected endpoints when the user isn't logged in.
-    if (isAuthenticated) {
+    // Prefer persisted token as well so refreshes don't prevent data loads.
+    const hasToken = !!localStorage.getItem('token')
+    if (isAuthenticated || hasToken) {
       dispatch(fetchInitiatives())
     }
   }, [dispatch, isAuthenticated])
@@ -53,7 +54,9 @@ function InitiativesList() {
     return colors[priority] || 'default'
   }
 
-  if (!isAuthenticated) {
+  // Use Redux flag + persisted token so refreshes don't incorrectly show the logged-out UI.
+  const hasToken = !!localStorage.getItem('token')
+  if (!isAuthenticated && !hasToken) {
     return (
       <Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
