@@ -6,6 +6,9 @@ from app.models.governance import ComplianceRequirement, ComplianceStatus, Polic
 from app.models.audit import AuditLog, Comment
 from app.models.attachment import Attachment, AttachmentType
 from app.models.intake_form import IntakeFormTemplate, IntakeFormField, FieldType
+from app.models.roadmap import (
+    RoadmapTimeline, InitiativeDependency, ResourceAllocation, StageGate
+)
 from app.models.scoring import (
     ScoringModelVersion, ScoringDimension, ScoringCriteria, InitiativeScore,
     ScenarioSimulation, InitiativeComparison, DimensionType, CriteriaType
@@ -44,6 +47,10 @@ __all__ = [
     "IntakeFormTemplate",
     "IntakeFormField",
     "FieldType",
+    "RoadmapTimeline",
+    "InitiativeDependency",
+    "ResourceAllocation",
+    "StageGate",
     "ScoringModelVersion",
     "ScoringDimension",
     "ScoringCriteria",

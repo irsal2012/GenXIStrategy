@@ -42,8 +42,13 @@ async def parse_unstructured_text(
             return ParseTextResponse(success=True, data=data)
         except json.JSONDecodeError:
             return ParseTextResponse(success=True, data={"raw": result["data"]})
-    else:
-        return ParseTextResponse(success=False, error=result.get("error"))
+
+    # Surface AI/provider errors to the client with an actionable message.
+    # (The frontend previously showed a generic error because this returned HTTP 200.)
+    raise HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail=result.get("error", "Failed to parse text")
+    )
 
 
 @router.post("/validate", response_model=ValidateIntakeResponse)
@@ -71,11 +76,11 @@ async def validate_intake_data(
                 missing_fields=[],
                 completeness_score=0
             )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=result.get("error", "Failed to validate intake data")
-        )
+
+    raise HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail=result.get("error", "Failed to validate intake data")
+    )
 
 
 @router.post("/classify", response_model=ClassifyUseCaseResponse)
@@ -107,8 +112,11 @@ async def classify_use_case(
             )
         except json.JSONDecodeError:
             return ClassifyUseCaseResponse(success=False, error="Failed to parse classification")
-    else:
-        return ClassifyUseCaseResponse(success=False, error=result.get("error"))
+
+    raise HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail=result.get("error", "Failed to classify use case")
+    )
 
 
 @router.post("/similar")
@@ -154,9 +162,15 @@ async def find_similar_initiatives(
                 "similar_initiatives": data.get("similar_initiatives", [])
             }
         except json.JSONDecodeError:
-            return {"success": False, "similar_initiatives": [], "error": "Failed to parse results"}
-    else:
-        return {"success": False, "similar_initiatives": [], "error": result.get("error")}
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Failed to parse similarity results"
+            )
+
+    raise HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail=result.get("error", "Failed to find similar initiatives")
+    )
 
 
 @router.get("/templates", response_model=List[IntakeFormTemplateSchema])

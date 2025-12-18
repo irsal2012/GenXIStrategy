@@ -6,7 +6,7 @@ export const parseUnstructuredText = createAsyncThunk(
   'intake/parseText',
   async (text, { rejectWithValue }) => {
     try {
-      const response = await axios.post('/api/intake/parse-text', { text });
+      const response = await axios.post('/intake/parse-text', { text });
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to parse text');
@@ -18,7 +18,7 @@ export const validateIntakeData = createAsyncThunk(
   'intake/validate',
   async (initiativeData, { rejectWithValue }) => {
     try {
-      const response = await axios.post('/api/intake/validate', { initiative_data: initiativeData });
+      const response = await axios.post('/intake/validate', { initiative_data: initiativeData });
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to validate data');
@@ -30,7 +30,7 @@ export const classifyUseCase = createAsyncThunk(
   'intake/classify',
   async (data, { rejectWithValue }) => {
     try {
-      const response = await axios.post('/api/intake/classify', data);
+      const response = await axios.post('/intake/classify', data);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to classify use case');
@@ -42,7 +42,7 @@ export const findSimilarInitiatives = createAsyncThunk(
   'intake/findSimilar',
   async (data, { rejectWithValue }) => {
     try {
-      const response = await axios.post('/api/intake/similar', data);
+      const response = await axios.post('/intake/similar', data);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to find similar initiatives');
@@ -58,7 +58,7 @@ export const getIntakeTemplates = createAsyncThunk(
       if (businessUnit) params.append('business_unit', businessUnit);
       if (aiType) params.append('ai_type', aiType);
       
-      const response = await axios.get(`/api/intake/templates?${params.toString()}`);
+      const response = await axios.get(`/intake/templates?${params.toString()}`);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to fetch templates');
@@ -70,7 +70,7 @@ export const createIntakeTemplate = createAsyncThunk(
   'intake/createTemplate',
   async (templateData, { rejectWithValue }) => {
     try {
-      const response = await axios.post('/api/intake/templates', templateData);
+      const response = await axios.post('/intake/templates', templateData);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to create template');
@@ -82,7 +82,7 @@ export const updateIntakeTemplate = createAsyncThunk(
   'intake/updateTemplate',
   async ({ templateId, templateData }, { rejectWithValue }) => {
     try {
-      const response = await axios.put(`/api/intake/templates/${templateId}`, templateData);
+      const response = await axios.put(`/intake/templates/${templateId}`, templateData);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to update template');
@@ -94,7 +94,7 @@ export const deleteIntakeTemplate = createAsyncThunk(
   'intake/deleteTemplate',
   async (templateId, { rejectWithValue }) => {
     try {
-      await axios.delete(`/api/intake/templates/${templateId}`);
+      await axios.delete(`/intake/templates/${templateId}`);
       return templateId;
     } catch (error) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to delete template');

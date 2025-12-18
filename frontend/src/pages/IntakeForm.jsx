@@ -154,7 +154,7 @@ const IntakeForm = () => {
     setError(null);
 
     try {
-      const response = await axios.post('/api/intake/parse-text', {
+      const response = await axios.post('/intake/parse-text', {
         text: unstructuredText
       });
 
@@ -180,7 +180,9 @@ const IntakeForm = () => {
         setError('Failed to parse text. Please try again.');
       }
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to parse text');
+      // Backend returns { success: false, error: "..." } for AI failures (e.g., OpenAI quota)
+      const backendMessage = err.response?.data?.detail || err.response?.data?.error;
+      setError(backendMessage || 'Failed to parse text');
     } finally {
       setParsing(false);
     }
@@ -197,7 +199,7 @@ const IntakeForm = () => {
     setError(null);
 
     try {
-      const response = await axios.post('/api/intake/classify', {
+      const response = await axios.post('/intake/classify', {
         title: formData.title,
         description: formData.description,
         business_objective: formData.business_objective,
@@ -216,7 +218,8 @@ const IntakeForm = () => {
         setSuccess('Initiative classified successfully!');
       }
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to classify initiative');
+      const backendMessage = err.response?.data?.detail || err.response?.data?.error;
+      setError(backendMessage || 'Failed to classify initiative');
     } finally {
       setClassifying(false);
     }
@@ -228,7 +231,7 @@ const IntakeForm = () => {
     setError(null);
 
     try {
-      const response = await axios.post('/api/intake/validate', {
+      const response = await axios.post('/intake/validate', {
         initiative_data: formData
       });
 
@@ -239,7 +242,8 @@ const IntakeForm = () => {
         }
       }
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to validate form');
+      const backendMessage = err.response?.data?.detail || err.response?.data?.error;
+      setError(backendMessage || 'Failed to validate form');
     } finally {
       setValidating(false);
     }
@@ -256,7 +260,7 @@ const IntakeForm = () => {
     setError(null);
 
     try {
-      const response = await axios.post('/api/intake/similar', {
+      const response = await axios.post('/intake/similar', {
         title: formData.title,
         description: formData.description,
         business_objective: formData.business_objective,
@@ -273,7 +277,8 @@ const IntakeForm = () => {
         }
       }
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to find similar initiatives');
+      const backendMessage = err.response?.data?.detail || err.response?.data?.error;
+      setError(backendMessage || 'Failed to find similar initiatives');
     } finally {
       setLoading(false);
     }
@@ -326,7 +331,7 @@ const IntakeForm = () => {
         priority: 'medium'
       };
 
-      const response = await axios.post('/api/initiatives/', initiativeData);
+      const response = await axios.post('/initiatives/', initiativeData);
       
       if (response.data) {
         const initiativeId = response.data.id;
@@ -338,7 +343,7 @@ const IntakeForm = () => {
           formDataUpload.append('initiative_id', initiativeId);
           formDataUpload.append('attachment_type', 'document');
           
-          await axios.post('/api/attachments/upload', formDataUpload, {
+          await axios.post('/attachments/upload', formDataUpload, {
             headers: {
               'Content-Type': 'multipart/form-data'
             }
