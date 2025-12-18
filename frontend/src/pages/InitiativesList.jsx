@@ -21,11 +21,15 @@ import { fetchInitiatives } from '../store/slices/initiativesSlice'
 function InitiativesList() {
   const navigate = useNavigate()
   const dispatch = useDispatch()
-  const { items, loading } = useSelector((state) => state.initiatives)
+  const { items, loading, error } = useSelector((state) => state.initiatives)
+  const { isAuthenticated } = useSelector((state) => state.auth)
 
   useEffect(() => {
-    dispatch(fetchInitiatives())
-  }, [dispatch])
+    // Avoid spamming protected endpoints when the user isn't logged in.
+    if (isAuthenticated) {
+      dispatch(fetchInitiatives())
+    }
+  }, [dispatch, isAuthenticated])
 
   const getStatusColor = (status) => {
     const colors = {
@@ -47,6 +51,29 @@ function InitiativesList() {
       low: 'success',
     }
     return colors[priority] || 'default'
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Box>
+            <Typography variant="h4" gutterBottom>
+              AI Initiatives
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Manage your AI portfolio
+            </Typography>
+          </Box>
+        </Box>
+
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="body2" color="text.secondary">
+            Please log in to view initiatives.
+          </Typography>
+        </Paper>
+      </Box>
+    )
   }
 
   if (loading) {
@@ -90,7 +117,15 @@ function InitiativesList() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {items.length === 0 ? (
+            {error ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center">
+                  <Typography variant="body2" color="error" sx={{ py: 3 }}>
+                    {typeof error === 'string' ? error : 'Failed to load initiatives'}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : items.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} align="center">
                   <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>

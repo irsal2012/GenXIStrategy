@@ -21,8 +21,12 @@ import PostImplementationReviews from './pages/PostImplementationReviews'
 import ExecutiveReporting from './pages/ExecutiveReporting'
 
 function PrivateRoute({ children }) {
+  // Prefer persisted token so refresh/navigation doesn't incorrectly bounce users to /login.
+  // Redux state is initialized from localStorage, but this makes the guard more robust.
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated)
-  return isAuthenticated ? children : <Navigate to="/login" />
+  const token = useSelector((state) => state.auth.token)
+  const hasToken = !!token || !!localStorage.getItem('token')
+  return isAuthenticated || hasToken ? children : <Navigate to="/login" />
 }
 
 function App() {
