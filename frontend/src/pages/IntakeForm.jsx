@@ -326,10 +326,25 @@ const IntakeForm = () => {
 
     try {
       // Create the initiative
+      // Backend expects:
+      // - status to be one of InitiativeStatus enum values
+      // - stakeholders to be a list of strings
+      // - expected_roi / budget_allocated to be numbers or null
       const initiativeData = {
         ...formData,
-        status: 'intake',
-        priority: 'medium'
+        status: 'ideation',
+        priority: 'medium',
+        stakeholders: formData.stakeholders
+          ? formData.stakeholders.split(',').map(s => s.trim()).filter(Boolean)
+          : [],
+        expected_roi:
+          formData.expected_roi === '' || formData.expected_roi === null
+            ? null
+            : Number(formData.expected_roi),
+        budget_allocated:
+          formData.budget_allocated === '' || formData.budget_allocated === null
+            ? 0
+            : Number(formData.budget_allocated)
       };
 
       const response = await axios.post('/initiatives/', initiativeData);
@@ -553,7 +568,12 @@ const IntakeForm = () => {
                   label="Add Technology"
                   value={techInput}
                   onChange={(e) => setTechInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddTechnology()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddTechnology();
+                    }
+                  }}
                   placeholder="e.g., GPT-4, TensorFlow, Python"
                   helperText="Press Enter to add"
                 />
@@ -576,7 +596,12 @@ const IntakeForm = () => {
                   label="Add Data Source"
                   value={dataSourceInput}
                   onChange={(e) => setDataSourceInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddDataSource()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddDataSource();
+                    }
+                  }}
                   placeholder="e.g., Customer Database, CRM System"
                   helperText="Press Enter to add"
                 />
