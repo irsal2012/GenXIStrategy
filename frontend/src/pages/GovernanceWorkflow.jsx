@@ -48,64 +48,82 @@ import {
   checkCompliance,
   mapRegulations,
 } from '../store/slices/governanceSlice'
+import { fetchInitiatives } from '../store/slices/initiativesSlice'
 
 function GovernanceWorkflow() {
   const dispatch = useDispatch()
-  const { workflows, stages, approvals, loading, error, aiResults } = useSelector(
-    (state) => state.governance
+  const { 
+    currentWorkflow, 
+    workflowStages, 
+    approvals, 
+    workflowLoading, 
+    stagesLoading, 
+    approvalsLoading,
+    aiLoading,
+    workflowError, 
+    stagesError, 
+    approvalsError,
+    aiError,
+    complianceCheck,
+    regulationMapping
+  } = useSelector((state) => state.governance)
+  
+  const { items: initiatives, loading: initiativesLoading } = useSelector(
+    (state) => state.initiatives
   )
 
   const [selectedInitiativeId, setSelectedInitiativeId] = useState('')
-  const [selectedWorkflow, setSelectedWorkflow] = useState(null)
-  const [workflowStages, setWorkflowStages] = useState([])
   const [initDialogOpen, setInitDialogOpen] = useState(false)
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false)
   const [aiDialogOpen, setAiDialogOpen] = useState(false)
   const [selectedStage, setSelectedStage] = useState(null)
   const [newWorkflow, setNewWorkflow] = useState({
-    initiative_id: '',
-    risk_tier: 'medium',
+    initiativeId: '',
+    riskTier: 'medium',
   })
   const [approvalData, setApprovalData] = useState({
-    decision: 'pending',
+    decision: 'approved',
     comments: '',
   })
 
-  // Mock initiatives for demo - in production, fetch from initiatives slice
-  const mockInitiatives = [
-    { id: 1, name: 'Customer Churn Prediction Model' },
-    { id: 2, name: 'Fraud Detection System' },
-    { id: 3, name: 'Recommendation Engine' },
-  ]
+  // Fetch initiatives on mount
+  useEffect(() => {
+    dispatch(fetchInitiatives())
+  }, [dispatch])
 
   useEffect(() => {
     if (selectedInitiativeId) {
-      dispatch(getWorkflowByInitiative(selectedInitiativeId))
+      dispatch(getWorkflowByInitiative(selectedInitiativeId)).catch(() => {
+        // Workflow not found is expected for initiatives without workflows
+        // The error will be displayed in the UI via workflowError state
+      })
     }
   }, [selectedInitiativeId, dispatch])
 
   useEffect(() => {
-    if (workflows[selectedInitiativeId]) {
-      const workflow = workflows[selectedInitiativeId]
-      setSelectedWorkflow(workflow)
-      dispatch(getWorkflowStages(workflow.id))
+    if (currentWorkflow) {
+      dispatch(getWorkflowStages(currentWorkflow.id))
     }
-  }, [workflows, selectedInitiativeId, dispatch])
-
-  useEffect(() => {
-    if (selectedWorkflow && stages[selectedWorkflow.id]) {
-      setWorkflowStages(stages[selectedWorkflow.id])
-    }
-  }, [selectedWorkflow, stages])
+  }, [currentWorkflow, dispatch])
 
   const handleInitializeWorkflow = async () => {
-    await dispatch(initializeWorkflow(newWorkflow))
-    setInitDialogOpen(false)
-    setNewWorkflow({ initiative_id: '', risk_tier: 'medium' })
+    const result = await dispatch(initializeWorkflow(newWorkflow))
+    if (result.type.endsWith('/fulfilled')) {
+      setInitDialogOpen(false)
+      setNewWorkflow({ initiativeId: '', riskTier: 'medium' })
+      // Refresh workflow data
+      if (newWorkflow.initiativeId) {
+        dispatch(getWorkflowByInitiative(newWorkflow.initiativeId))
+      }
+    }
   }
 
   const handleAdvanceWorkflow = async (workflowId) => {
-    await dispatch(advanceWorkflow(workflowId))
+    const result = await dispatch(advanceWorkflow(workflowId))
+    if (result.type.endsWith('/fulfilled')) {
+      // Refresh workflow and stages
+      dispatch(getWorkflowByInitiative(selectedInitiativeId))
+    }
   }
 
   const handleOpenApprovalDialog = (stage) => {
@@ -126,40 +144,44 @@ function GovernanceWorkflow() {
       
       // Then submit decision
       if (approval.payload?.id) {
-        await dispatch(
+        const result = await dispatch(
           submitApproval({
             approvalId: approval.payload.id,
             decision: approvalData.decision,
             comments: approvalData.comments,
           })
         )
+        
+        if (result.type.endsWith('/fulfilled')) {
+          setApprovalDialogOpen(false)
+          setApprovalData({ decision: 'approved', comments: '' })
+          // Refresh workflow and stages
+          dispatch(getWorkflowByInitiative(selectedInitiativeId))
+        }
       }
-      
-      setApprovalDialogOpen(false)
-      setApprovalData({ decision: 'pending', comments: '' })
     }
   }
 
   const handleCheckCompliance = async () => {
     if (selectedInitiativeId) {
-      await dispatch(
+      const result = await dispatch(
         checkCompliance({
-          initiative_id: parseInt(selectedInitiativeId),
-          check_type: 'completeness',
+          initiativeId: parseInt(selectedInitiativeId),
+          checkType: 'completeness',
         })
       )
-      setAiDialogOpen(true)
+      if (result.type.endsWith('/fulfilled')) {
+        setAiDialogOpen(true)
+      }
     }
   }
 
   const handleMapRegulations = async () => {
     if (selectedInitiativeId) {
-      await dispatch(
-        mapRegulations({
-          initiative_id: parseInt(selectedInitiativeId),
-        })
-      )
-      setAiDialogOpen(true)
+      const result = await dispatch(mapRegulations(parseInt(selectedInitiativeId)))
+      if (result.type.endsWith('/fulfilled')) {
+        setAiDialogOpen(true)
+      }
     }
   }
 
@@ -188,10 +210,12 @@ function GovernanceWorkflow() {
   }
 
   const getActiveStep = () => {
-    if (!workflowStages.length) return 0
+    if (!workflowStages || !workflowStages.length) return 0
     const currentStage = workflowStages.find((s) => s.status === 'in_progress')
     return currentStage ? workflowStages.indexOf(currentStage) : 0
   }
+
+  const displayError = workflowError || stagesError || approvalsError || aiError
 
   return (
     <Box>
@@ -202,9 +226,9 @@ function GovernanceWorkflow() {
         </Button>
       </Box>
 
-      {error && (
+      {displayError && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
+          {displayError}
         </Alert>
       )}
 
@@ -221,51 +245,57 @@ function GovernanceWorkflow() {
                   value={selectedInitiativeId}
                   onChange={(e) => setSelectedInitiativeId(e.target.value)}
                   label="Initiative"
+                  disabled={initiativesLoading}
                 >
-                  {mockInitiatives.map((init) => (
+                  {initiatives.map((init) => (
                     <MenuItem key={init.id} value={init.id}>
-                      {init.name}
+                      {init.title}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
+              {initiatives.length === 0 && !initiativesLoading && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  No initiatives found. Create an initiative first.
+                </Alert>
+              )}
             </CardContent>
           </Card>
         </Grid>
 
-        {selectedWorkflow && (
+        {currentWorkflow && (
           <Grid item xs={12} md={8}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                   <Typography variant="h6">Workflow Status</Typography>
                   <Chip
-                    label={selectedWorkflow.status}
-                    color={getStatusColor(selectedWorkflow.status)}
-                    icon={getStatusIcon(selectedWorkflow.status)}
+                    label={currentWorkflow.status}
+                    color={getStatusColor(currentWorkflow.status)}
+                    icon={getStatusIcon(currentWorkflow.status)}
                   />
                 </Box>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Risk Tier: <strong>{selectedWorkflow.risk_tier}</strong>
+                  Risk Tier: <strong>{currentWorkflow.risk_tier}</strong>
                 </Typography>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Current Stage: <strong>{selectedWorkflow.current_stage_name || 'N/A'}</strong>
+                  Current Stage: <strong>{currentWorkflow.current_stage_name || 'N/A'}</strong>
                 </Typography>
                 <Box sx={{ mt: 2 }}>
                   <Button
                     variant="outlined"
                     onClick={handleCheckCompliance}
                     sx={{ mr: 1 }}
-                    disabled={loading.ai}
+                    disabled={aiLoading}
                   >
-                    Check Compliance
+                    {aiLoading ? <CircularProgress size={20} /> : 'Check Compliance'}
                   </Button>
                   <Button
                     variant="outlined"
                     onClick={handleMapRegulations}
-                    disabled={loading.ai}
+                    disabled={aiLoading}
                   >
-                    Map Regulations
+                    {aiLoading ? <CircularProgress size={20} /> : 'Map Regulations'}
                   </Button>
                 </Box>
               </CardContent>
@@ -273,7 +303,7 @@ function GovernanceWorkflow() {
           </Grid>
         )}
 
-        {workflowStages.length > 0 && (
+        {workflowStages && workflowStages.length > 0 && (
           <Grid item xs={12}>
             <Card>
               <CardContent>
@@ -344,15 +374,15 @@ function GovernanceWorkflow() {
                   </Accordion>
                 ))}
 
-                {selectedWorkflow?.status === 'in_progress' && (
+                {currentWorkflow?.status === 'in_progress' && (
                   <Box sx={{ mt: 2, textAlign: 'center' }}>
                     <Button
                       variant="contained"
                       color="primary"
-                      onClick={() => handleAdvanceWorkflow(selectedWorkflow.id)}
-                      disabled={loading.workflows}
+                      onClick={() => handleAdvanceWorkflow(currentWorkflow.id)}
+                      disabled={workflowLoading}
                     >
-                      Advance Workflow
+                      {workflowLoading ? <CircularProgress size={20} /> : 'Advance Workflow'}
                     </Button>
                   </Box>
                 )}
@@ -369,13 +399,13 @@ function GovernanceWorkflow() {
           <FormControl fullWidth sx={{ mt: 2 }}>
             <InputLabel>Initiative</InputLabel>
             <Select
-              value={newWorkflow.initiative_id}
-              onChange={(e) => setNewWorkflow({ ...newWorkflow, initiative_id: e.target.value })}
+              value={newWorkflow.initiativeId}
+              onChange={(e) => setNewWorkflow({ ...newWorkflow, initiativeId: e.target.value })}
               label="Initiative"
             >
-              {mockInitiatives.map((init) => (
+              {initiatives.map((init) => (
                 <MenuItem key={init.id} value={init.id}>
-                  {init.name}
+                  {init.title}
                 </MenuItem>
               ))}
             </Select>
@@ -383,8 +413,8 @@ function GovernanceWorkflow() {
           <FormControl fullWidth sx={{ mt: 2 }}>
             <InputLabel>Risk Tier</InputLabel>
             <Select
-              value={newWorkflow.risk_tier}
-              onChange={(e) => setNewWorkflow({ ...newWorkflow, risk_tier: e.target.value })}
+              value={newWorkflow.riskTier}
+              onChange={(e) => setNewWorkflow({ ...newWorkflow, riskTier: e.target.value })}
               label="Risk Tier"
             >
               <MenuItem value="low">Low (3 stages)</MenuItem>
@@ -395,8 +425,12 @@ function GovernanceWorkflow() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setInitDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleInitializeWorkflow} variant="contained" disabled={loading.workflows}>
-            Initialize
+          <Button 
+            onClick={handleInitializeWorkflow} 
+            variant="contained" 
+            disabled={workflowLoading || !newWorkflow.initiativeId}
+          >
+            {workflowLoading ? <CircularProgress size={20} /> : 'Initialize'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -419,13 +453,13 @@ function GovernanceWorkflow() {
                 Status: {selectedStage.status}
               </Typography>
 
-              {approvals[selectedStage.id] && approvals[selectedStage.id].length > 0 && (
+              {approvals && approvals.length > 0 && (
                 <>
                   <Typography variant="subtitle1" sx={{ mt: 2 }}>
                     Previous Approvals:
                   </Typography>
                   <List>
-                    {approvals[selectedStage.id].map((approval) => (
+                    {approvals.map((approval) => (
                       <ListItem key={approval.id}>
                         <ListItemText
                           primary={`Decision: ${approval.decision}`}
@@ -469,8 +503,8 @@ function GovernanceWorkflow() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setApprovalDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSubmitApproval} variant="contained" disabled={loading.approvals}>
-            Submit Approval
+          <Button onClick={handleSubmitApproval} variant="contained" disabled={approvalsLoading}>
+            {approvalsLoading ? <CircularProgress size={20} /> : 'Submit Approval'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -479,24 +513,33 @@ function GovernanceWorkflow() {
       <Dialog open={aiDialogOpen} onClose={() => setAiDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>AI Analysis Results</DialogTitle>
         <DialogContent>
-          {aiResults.complianceCheck && (
+          {complianceCheck && (
             <Box sx={{ mb: 2 }}>
-              <Typography variant="h6">Compliance Check</Typography>
-              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                {JSON.stringify(aiResults.complianceCheck, null, 2)}
-              </Typography>
+              <Typography variant="h6" gutterBottom>Compliance Check</Typography>
+              <Card variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
+                <Typography variant="body2" component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                  {JSON.stringify(complianceCheck, null, 2)}
+                </Typography>
+              </Card>
             </Box>
           )}
-          {aiResults.regulationMapping && (
+          {regulationMapping && (
             <Box sx={{ mb: 2 }}>
-              <Typography variant="h6">Regulation Mapping</Typography>
-              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                {JSON.stringify(aiResults.regulationMapping, null, 2)}
-              </Typography>
+              <Typography variant="h6" gutterBottom>Regulation Mapping</Typography>
+              <Card variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
+                <Typography variant="body2" component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                  {JSON.stringify(regulationMapping, null, 2)}
+                </Typography>
+              </Card>
             </Box>
           )}
-          <Alert severity="info" sx={{ mt: 2 }}>
-            These are AI-generated recommendations only. Human review and approval is required.
+          {!complianceCheck && !regulationMapping && (
+            <Alert severity="info">
+              No AI analysis results available yet.
+            </Alert>
+          )}
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            <strong>Important:</strong> These are AI-generated recommendations only. Human review and approval is required for all governance decisions.
           </Alert>
         </DialogContent>
         <DialogActions>
