@@ -8,6 +8,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import InitiativesList from './pages/InitiativesList'
 import InitiativeDetail from './pages/InitiativeDetail'
+import InitiativeForm from './pages/InitiativeForm'
 import IntakeForm from './pages/IntakeForm'
 import PortfolioRankings from './pages/PortfolioRankings'
 import PortfolioBalance from './pages/PortfolioBalance'
@@ -55,6 +56,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="intake" element={<IntakeForm />} />
           <Route path="initiatives" element={<InitiativesList />} />
+          <Route path="initiatives/new" element={<InitiativeForm />} />
           <Route path="initiatives/:id" element={<InitiativeDetail />} />
           <Route path="portfolio/rankings" element={<PortfolioRankings />} />
           <Route path="portfolio/balance" element={<PortfolioBalance />} />

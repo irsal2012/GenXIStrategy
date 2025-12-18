@@ -101,7 +101,7 @@ function InitiativesList() {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => navigate('/initiatives/new')}
+          onClick={() => navigate('/intake')}
         >
           New Initiative
         </Button>
