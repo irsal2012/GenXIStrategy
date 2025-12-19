@@ -132,20 +132,6 @@ function Layout() {
       <Divider />
       <List>
         <ListItem>
-          <ListItemText primary="Executive Reporting" primaryTypographyProps={{ fontWeight: 'bold', fontSize: '0.875rem' }} />
-        </ListItem>
-        {reportingMenuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton onClick={() => navigate(item.path)}>
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-      <Divider />
-      <List>
-        <ListItem>
           <ListItemText primary="AI Projects" primaryTypographyProps={{ fontWeight: 'bold', fontSize: '0.875rem', color: 'primary.main' }} />
         </ListItem>
         {aiProjectMenuItems.map((item) => (
@@ -162,6 +148,20 @@ function Layout() {
             secondaryTypographyProps={{ fontSize: '0.75rem', fontStyle: 'italic' }} 
           />
         </ListItem>
+      </List>
+      <Divider />
+      <List>
+        <ListItem>
+          <ListItemText primary="Executive Reporting" primaryTypographyProps={{ fontWeight: 'bold', fontSize: '0.875rem' }} />
+        </ListItem>
+        {reportingMenuItems.map((item) => (
+          <ListItem key={item.text} disablePadding>
+            <ListItemButton onClick={() => navigate(item.path)}>
+              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.text} />
+            </ListItemButton>
+          </ListItem>
+        ))}
       </List>
       <Divider />
       <List>
