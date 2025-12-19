@@ -46,8 +46,9 @@ import { getInitiatives } from '../store/slices/initiativesSlice';
 
 const PostImplementationReviews = () => {
   const dispatch = useDispatch();
-  const { pirs, aiInsights, loading, error } = useSelector((state) => state.benefits);
-  const { initiatives } = useSelector((state) => state.initiatives);
+  const { pirs = [], aiInsights = {}, loading = {}, error } = useSelector((state) => state.benefits || {});
+  // initiatives slice stores the list under `items` (getInitiatives is an alias for fetchInitiatives)
+  const { items: initiatives = [] } = useSelector((state) => state.initiatives || {});
 
   const [selectedInitiative, setSelectedInitiative] = useState('');
   const [openPIRDialog, setOpenPIRDialog] = useState(false);
@@ -262,7 +263,7 @@ const PostImplementationReviews = () => {
         </Grid>
       </Paper>
 
-      {loading.pirs && <LinearProgress sx={{ mb: 3 }} />}
+      {loading?.pirs && <LinearProgress sx={{ mb: 3 }} />}
 
       {/* Summary Cards */}
       {selectedInitiative && pirs.length > 0 && (
@@ -319,7 +320,7 @@ const PostImplementationReviews = () => {
       )}
 
       {/* Empty State */}
-      {selectedInitiative && pirs.length === 0 && !loading.pirs && (
+      {selectedInitiative && pirs.length === 0 && !loading?.pirs && (
         <Paper sx={{ p: 6, textAlign: 'center' }}>
           <Assessment sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
           <Typography variant="h6" gutterBottom>
