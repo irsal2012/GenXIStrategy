@@ -47,11 +47,12 @@ import { getInitiatives } from '../store/slices/initiativesSlice';
 const BenefitsDashboard = () => {
   const dispatch = useDispatch();
   const { benefits, benefitsSummary, aiInsights, loading, error } = useSelector((state) => state.benefits);
-  const { initiatives } = useSelector((state) => state.initiatives);
+  // initiativesSlice stores the list under `items`
+  const { items: initiativesItems = [] } = useSelector((state) => state.initiatives || {});
 
   // Defensive defaults so the page never crashes during initial load or on bad API payloads.
   const benefitsList = Array.isArray(benefits) ? benefits : [];
-  const initiativesList = Array.isArray(initiatives) ? initiatives : [];
+  const initiativesList = Array.isArray(initiativesItems) ? initiativesItems : [];
   const safeAIInsights = aiInsights || {};
   const safeLoading = loading || {};
 
