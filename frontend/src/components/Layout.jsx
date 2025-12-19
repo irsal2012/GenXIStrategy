@@ -146,7 +146,7 @@ function Layout() {
       <Divider />
       <List>
         <ListItem>
-          <ListItemText primary="AI Projects (Module 7)" primaryTypographyProps={{ fontWeight: 'bold', fontSize: '0.875rem', color: 'primary.main' }} />
+          <ListItemText primary="AI Projects" primaryTypographyProps={{ fontWeight: 'bold', fontSize: '0.875rem', color: 'primary.main' }} />
         </ListItem>
         {aiProjectMenuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
