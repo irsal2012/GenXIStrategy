@@ -9,6 +9,7 @@ import roadmapReducer from './slices/roadmapSlice'
 import governanceReducer from './slices/governanceSlice'
 import benefitsReducer from './slices/benefitsSlice'
 import reportingReducer from './slices/reportingSlice'
+import aiProjectsReducer from './slices/aiProjectsSlice'
 
 const store = configureStore({
   reducer: {
@@ -22,6 +23,7 @@ const store = configureStore({
     governance: governanceReducer,
     benefits: benefitsReducer,
     reporting: reportingReducer,
+    aiProjects: aiProjectsReducer,
   },
 })
 

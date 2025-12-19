@@ -23,6 +23,14 @@ import ValueLeakageDetector from './pages/ValueLeakageDetector'
 import PostImplementationReviews from './pages/PostImplementationReviews'
 import ExecutiveReporting from './pages/ExecutiveReporting'
 import Analytics from './pages/Analytics'
+import AIProjectDashboard from './pages/AIProjectDashboard'
+import BusinessUnderstanding from './pages/BusinessUnderstanding'
+import DataUnderstanding from './pages/DataUnderstanding'
+import DataPreparation from './pages/DataPreparation'
+import ModelDevelopment from './pages/ModelDevelopment'
+import ModelEvaluation from './pages/ModelEvaluation'
+import ModelDeployment from './pages/ModelDeployment'
+import ModelMonitoring from './pages/ModelMonitoring'
 
 function PrivateRoute({ children }) {
   // Prefer persisted token so refresh/navigation doesn't incorrectly bounce users to /login.
@@ -73,6 +81,14 @@ function App() {
           <Route path="benefits/reviews" element={<PostImplementationReviews />} />
           <Route path="reporting" element={<ExecutiveReporting />} />
           <Route path="analytics" element={<Analytics />} />
+          <Route path="ai-projects/:initiativeId" element={<AIProjectDashboard />} />
+          <Route path="ai-projects/:initiativeId/business-understanding" element={<BusinessUnderstanding />} />
+          <Route path="ai-projects/:initiativeId/data-understanding" element={<DataUnderstanding />} />
+          <Route path="ai-projects/:initiativeId/data-preparation" element={<DataPreparation />} />
+          <Route path="ai-projects/:initiativeId/model-development" element={<ModelDevelopment />} />
+          <Route path="ai-projects/:initiativeId/model-evaluation" element={<ModelEvaluation />} />
+          <Route path="ai-projects/:initiativeId/model-deployment" element={<ModelDeployment />} />
+          <Route path="ai-projects/:initiativeId/model-monitoring" element={<ModelMonitoring />} />
         </Route>
       </Routes>
     </Box>

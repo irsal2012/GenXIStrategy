@@ -31,6 +31,7 @@ import {
   AccountBalance as AccountBalanceIcon,
   Warning as WarningIcon,
   Summarize as SummarizeIcon,
+  Psychology as PsychologyIcon,
 } from '@mui/icons-material'
 import { logout } from '../store/slices/authSlice'
 
@@ -76,6 +77,10 @@ function Layout() {
 
   const reportingMenuItems = [
     { text: 'Executive Reporting', icon: <SummarizeIcon />, path: '/reporting' },
+  ]
+
+  const aiProjectMenuItems = [
+    { text: 'AI Project Management', icon: <PsychologyIcon />, path: '/initiatives' },
   ]
 
   const drawer = (
@@ -137,6 +142,26 @@ function Layout() {
             </ListItemButton>
           </ListItem>
         ))}
+      </List>
+      <Divider />
+      <List>
+        <ListItem>
+          <ListItemText primary="AI Projects (Module 7)" primaryTypographyProps={{ fontWeight: 'bold', fontSize: '0.875rem', color: 'primary.main' }} />
+        </ListItem>
+        {aiProjectMenuItems.map((item) => (
+          <ListItem key={item.text} disablePadding>
+            <ListItemButton onClick={() => navigate(item.path)}>
+              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.text} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+        <ListItem>
+          <ListItemText 
+            secondary="Select an initiative to manage its AI project lifecycle" 
+            secondaryTypographyProps={{ fontSize: '0.75rem', fontStyle: 'italic' }} 
+          />
+        </ListItem>
       </List>
       <Divider />
       <List>
