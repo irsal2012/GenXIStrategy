@@ -75,11 +75,25 @@ class BusinessUnderstanding(Base):
     """
     Business Understanding Phase
     Captures business objectives, requirements, and data feasibility assessment
+    Enhanced with PMI-CPMAI workflow support
     """
     __tablename__ = "business_understanding"
 
     id = Column(Integer, primary_key=True, index=True)
     initiative_id = Column(Integer, ForeignKey("initiatives.id"), nullable=False, unique=True)
+    
+    # PMI-CPMAI: Business Problem Definition
+    business_problem_text = Column(Text, nullable=True)  # Original problem description from user
+    ai_pattern = Column(String(100), nullable=True)  # One of 7 PMI patterns
+    ai_pattern_confidence = Column(Float, nullable=True)  # Confidence score (0-1)
+    pattern_override = Column(Boolean, default=False)  # True if user changed AI suggestion
+    ai_pattern_reasoning = Column(Text, nullable=True)  # AI's reasoning for pattern selection
+    
+    # PMI-CPMAI: Initiative Matching
+    similar_initiatives_found = Column(JSON, nullable=True)  # List of similar initiative IDs with scores
+    ai_recommended_initiative_id = Column(Integer, nullable=True)  # AI's top recommendation
+    ai_recommendation_reasoning = Column(Text, nullable=True)  # Why AI recommended this initiative
+    user_feedback_no_match = Column(Text, nullable=True)  # User feedback if no good match
     
     # Business objectives
     business_objectives = Column(Text, nullable=True)
@@ -91,6 +105,7 @@ class BusinessUnderstanding(Base):
     data_sources_identified = Column(JSON, nullable=True)  # List of data sources
     data_access_confirmed = Column(Boolean, default=False)
     compliance_cleared = Column(Boolean, default=False)
+    compliance_requirements = Column(JSON, nullable=True)  # List of compliance requirements
     feasibility_notes = Column(Text, nullable=True)
     
     # Go/No-Go decision

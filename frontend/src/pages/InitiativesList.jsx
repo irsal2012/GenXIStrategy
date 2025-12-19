@@ -98,13 +98,6 @@ function InitiativesList() {
             Manage your AI portfolio
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate('/intake')}
-        >
-          New Initiative
-        </Button>
       </Box>
 
       <TableContainer component={Paper}>

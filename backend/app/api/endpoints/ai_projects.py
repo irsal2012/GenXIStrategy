@@ -35,8 +35,263 @@ from app.schemas.ai_project import (
 )
 from app.services.ai_project_service import AIProjectService
 from app.agents.ai_project_manager_agent import AIProjectManagerAgent
+from app.services.semantic_search_service import semantic_search_service
+from app.models.initiative import Initiative
 
 router = APIRouter()
+
+
+# ============================================================================
+# PMI-CPMAI Workflow Endpoints
+# ============================================================================
+
+@router.post("/pmi-cpmai/classify-pattern", response_model=dict)
+async def classify_ai_pattern(
+    business_problem: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Classify business problem into one of PMI's 7 AI patterns.
+    Step 2 of PMI-CPMAI workflow.
+    """
+    try:
+        agent = AIProjectManagerAgent()
+        result = await agent.classify_ai_pattern(business_problem)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/pmi-cpmai/find-similar-initiatives", response_model=dict)
+async def find_similar_initiatives(
+    business_problem: str,
+    ai_pattern: Optional[str] = None,
+    status_filter: Optional[List[str]] = Query(default=["ideation", "planning"]),
+    top_k: int = Query(default=10, le=20),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Find similar initiatives using semantic search.
+    Step 3 of PMI-CPMAI workflow.
+    """
+    try:
+        # Perform semantic search
+        similar_initiatives = await semantic_search_service.find_similar_initiatives(
+            query_text=business_problem,
+            top_k=top_k,
+            status_filter=status_filter,
+            min_similarity=0.3
+        )
+        
+        # If too few results, try fallback keyword search
+        if len(similar_initiatives) < 3:
+            # Get all initiatives from database
+            all_initiatives = db.query(Initiative).filter(
+                Initiative.status.in_(status_filter) if status_filter else True
+            ).all()
+            
+            initiatives_dict = [
+                {
+                    "id": init.id,
+                    "title": init.title,
+                    "description": init.description,
+                    "business_objective": init.business_objective,
+                    "status": init.status.value if init.status else None
+                }
+                for init in all_initiatives
+            ]
+            
+            keyword_results = semantic_search_service.fallback_keyword_search(
+                query_text=business_problem,
+                initiatives=initiatives_dict,
+                top_k=top_k
+            )
+            
+            return {
+                "success": True,
+                "data": {
+                    "initiatives": keyword_results,
+                    "search_method": "keyword",
+                    "total_found": len(keyword_results),
+                    "message": "Using keyword search (semantic search returned too few results)"
+                }
+            }
+        
+        # Enrich with full initiative data from database
+        initiative_ids = [init["initiative_id"] for init in similar_initiatives]
+        full_initiatives = db.query(Initiative).filter(Initiative.id.in_(initiative_ids)).all()
+        
+        # Create lookup dict
+        initiative_lookup = {init.id: init for init in full_initiatives}
+        
+        # Enrich results
+        enriched_results = []
+        for sim_init in similar_initiatives:
+            init_id = sim_init["initiative_id"]
+            if init_id in initiative_lookup:
+                full_init = initiative_lookup[init_id]
+                enriched_results.append({
+                    **sim_init,
+                    "owner_id": full_init.owner_id,
+                    "priority": full_init.priority.value if full_init.priority else None,
+                    "budget_allocated": full_init.budget_allocated,
+                    "business_value_score": full_init.business_value_score,
+                    "technical_feasibility_score": full_init.technical_feasibility_score,
+                    "strategic_alignment_score": full_init.strategic_alignment_score
+                })
+        
+        return {
+            "success": True,
+            "data": {
+                "initiatives": enriched_results,
+                "search_method": "semantic",
+                "total_found": len(enriched_results)
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/pmi-cpmai/recommend-initiative", response_model=dict)
+async def recommend_best_initiative(
+    business_problem: str,
+    ai_pattern: str,
+    similar_initiatives: List[dict],
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get AI recommendation for best matching initiative.
+    Step 4 of PMI-CPMAI workflow.
+    """
+    try:
+        agent = AIProjectManagerAgent()
+        result = await agent.recommend_best_initiative(
+            business_problem=business_problem,
+            ai_pattern=ai_pattern,
+            similar_initiatives=similar_initiatives
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/pmi-cpmai/link-business-understanding", response_model=BusinessUnderstanding)
+async def link_business_understanding_to_initiative(
+    initiative_id: int,
+    business_problem_text: str,
+    ai_pattern: str,
+    ai_pattern_confidence: float,
+    ai_pattern_reasoning: str,
+    pattern_override: bool = False,
+    similar_initiatives_found: Optional[List[dict]] = None,
+    ai_recommended_initiative_id: Optional[int] = None,
+    ai_recommendation_reasoning: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Create or update business understanding with PMI-CPMAI workflow data.
+    Final step of PMI-CPMAI workflow - links problem to selected initiative.
+    """
+    try:
+        # Check if business understanding already exists
+        existing = AIProjectService.get_business_understanding_by_initiative(db, initiative_id)
+        
+        if existing:
+            # Update existing
+            existing.business_problem_text = business_problem_text
+            existing.ai_pattern = ai_pattern
+            existing.ai_pattern_confidence = ai_pattern_confidence
+            existing.ai_pattern_reasoning = ai_pattern_reasoning
+            existing.pattern_override = pattern_override
+            existing.similar_initiatives_found = similar_initiatives_found
+            existing.ai_recommended_initiative_id = ai_recommended_initiative_id
+            existing.ai_recommendation_reasoning = ai_recommendation_reasoning
+            existing.updated_at = datetime.utcnow()
+            db.commit()
+            db.refresh(existing)
+            return existing
+        else:
+            # Create new
+            from app.schemas.ai_project import BusinessUnderstandingCreate
+            business_understanding_data = BusinessUnderstandingCreate(
+                initiative_id=initiative_id,
+                business_problem_text=business_problem_text,
+                ai_pattern=ai_pattern,
+                ai_pattern_confidence=ai_pattern_confidence,
+                ai_pattern_reasoning=ai_pattern_reasoning,
+                pattern_override=pattern_override,
+                similar_initiatives_found=similar_initiatives_found,
+                ai_recommended_initiative_id=ai_recommended_initiative_id,
+                ai_recommendation_reasoning=ai_recommendation_reasoning
+            )
+            return AIProjectService.create_business_understanding(db, business_understanding_data, current_user.id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/pmi-cpmai/submit-no-match-feedback")
+async def submit_no_match_feedback(
+    business_problem_text: str,
+    ai_pattern: str,
+    feedback_text: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Submit feedback when user finds no matching initiatives.
+    This can be used for admin review and future initiative creation.
+    """
+    try:
+        # For now, just log it. In future, could store in a feedback table
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"No-match feedback from user {current_user.id}: {feedback_text}")
+        logger.info(f"Business problem: {business_problem_text}")
+        logger.info(f"AI Pattern: {ai_pattern}")
+        
+        return {
+            "success": True,
+            "message": "Feedback submitted successfully. An administrator will review your request."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/pmi-cpmai/rebuild-embeddings")
+async def rebuild_all_embeddings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Rebuild all initiative embeddings.
+    Admin endpoint for maintenance.
+    """
+    try:
+        # Get all initiatives
+        all_initiatives = db.query(Initiative).all()
+        
+        initiatives_data = [
+            {
+                "id": init.id,
+                "title": init.title,
+                "description": init.description,
+                "business_objective": init.business_objective or "",
+                "ai_pattern": "",  # Will be populated as initiatives go through workflow
+                "status": init.status.value if init.status else ""
+            }
+            for init in all_initiatives
+        ]
+        
+        await semantic_search_service.rebuild_all_embeddings(initiatives_data)
+        
+        return {
+            "success": True,
+            "message": f"Successfully rebuilt embeddings for {len(initiatives_data)} initiatives"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================

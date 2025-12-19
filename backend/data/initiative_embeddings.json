@@ -1,0 +1,9 @@
+{
+  "embeddings": [],
+  "metadata": {
+    "model": "text-embedding-3-small",
+    "dimension": 1536,
+    "last_updated": "2025-12-19T23:19:34.543930",
+    "total_initiatives": 0
+  }
+}

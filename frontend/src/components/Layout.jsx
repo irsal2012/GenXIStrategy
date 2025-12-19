@@ -80,7 +80,8 @@ function Layout() {
   ]
 
   const aiProjectMenuItems = [
-    { text: 'AI Project Management', icon: <PsychologyIcon />, path: '/initiatives' },
+    { text: 'PMI-CPMAI Workflow', icon: <PsychologyIcon />, path: '/pmi-cpmai/business-understanding' },
+    { text: 'View All Initiatives', icon: <AssignmentIcon />, path: '/initiatives' },
   ]
 
   const drawer = (

@@ -1,6 +1,7 @@
 """
 AI Project Manager Agent - Module 7
 AI-powered insights and recommendations for AI project management
+Enhanced with PMI-CPMAI pattern classification and initiative matching
 """
 from typing import Dict, Any, List
 from openai import OpenAI
@@ -11,7 +12,174 @@ class AIProjectManagerAgent(BaseAgent):
     """
     AI Project Manager Agent
     Provides AI-powered analysis and recommendations for AI project lifecycle management
+    Enhanced with PMI-CPMAI workflow support
     """
+
+    # PMI-CPMAI Seven Patterns
+    PMI_PATTERNS = [
+        "Hyperpersonalization",
+        "Conversational & Human Interaction",
+        "Recognition",
+        "Pattern & Anomaly Detection",
+        "Predictive Analytics & Decision Support",
+        "Goal-Driven Systems",
+        "Autonomous Systems"
+    ]
+
+    async def classify_ai_pattern(
+        self,
+        business_problem: str
+    ) -> Dict[str, Any]:
+        """
+        Classify business problem into one of PMI's 7 AI patterns.
+        
+        Args:
+            business_problem: Description of the business problem
+            
+        Returns:
+            Dict with pattern classification, confidence, and reasoning
+        """
+        prompt = f"""
+You are an AI Project Manager expert in PMI-CPMAI (Certified Professional in Machine Learning and Artificial Intelligence).
+
+Analyze the following business problem and classify it into ONE of the seven PMI AI patterns:
+
+1. **Hyperpersonalization**: Uses machine learning to build and continually refine unique profiles for individuals so systems can tailor experiences, recommendations, or interactions specifically to each person.
+
+2. **Conversational & Human Interaction**: Enables natural communication between humans and machines (voice, text, etc.), including chatbots, assistants, translation, summarization, and generative content creation.
+
+3. **Recognition**: Lets AI perceive and interpret unstructured sensory data — e.g., images, audio, handwriting, text — and convert it into structured information for action or analysis.
+
+4. **Pattern & Anomaly Detection**: Learns what "normal" looks like in data and identifies structure, outliers, correlations, or unusual behavior — widely used in fraud detection, quality control, and risk monitoring.
+
+5. **Predictive Analytics & Decision Support**: Forecasts future outcomes, trends, or risks based on historical and real-time data to inform human decision-making.
+
+6. **Goal-Driven Systems**: Uses feedback and optimization (e.g., reinforcement learning) to pursue defined goals by learning strategies that maximize reward through trial and error.
+
+7. **Autonomous Systems**: AI agents that perceive, decide, and act toward goals with minimal human intervention — from self-driving vehicles to autonomous robots or intelligent software agents.
+
+Business Problem:
+{business_problem}
+
+Analyze this problem and respond in JSON format:
+{{
+    "primary_pattern": "<exact pattern name from list above>",
+    "confidence": <0.0-1.0>,
+    "reasoning": "<detailed explanation of why this pattern fits>",
+    "secondary_patterns": ["<pattern name>", ...],
+    "key_indicators": ["indicator1", "indicator2"],
+    "use_case_examples": ["example1", "example2"]
+}}
+"""
+        
+        try:
+            response = await self._call_openai(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.2  # Low temperature for consistent classification
+            )
+            
+            result = self._parse_json_response(response)
+            self._log_agent_call("classify_ai_pattern", {"business_problem": business_problem[:100]}, result)
+            
+            return self._format_success_response(
+                data=result,
+                message="AI pattern classification completed"
+            )
+        except Exception as e:
+            return self._handle_error(e)
+
+    async def recommend_best_initiative(
+        self,
+        business_problem: str,
+        ai_pattern: str,
+        similar_initiatives: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Recommend the best matching initiative from similar initiatives.
+        
+        Args:
+            business_problem: Original business problem description
+            ai_pattern: Classified AI pattern
+            similar_initiatives: List of similar initiatives with similarity scores
+            
+        Returns:
+            Dict with recommendation, reasoning, and ranked alternatives
+        """
+        if not similar_initiatives:
+            return self._format_success_response(
+                data={
+                    "recommended_initiative_id": None,
+                    "confidence": 0.0,
+                    "reasoning": "No similar initiatives found in the system.",
+                    "ranked_alternatives": []
+                },
+                message="No initiatives to recommend"
+            )
+        
+        # Format initiatives for prompt
+        initiatives_text = "\n\n".join([
+            f"Initiative #{init['initiative_id']}:\n"
+            f"- Title: {init['title']}\n"
+            f"- Description: {init['description']}\n"
+            f"- Business Objective: {init.get('business_objective', 'N/A')}\n"
+            f"- AI Pattern: {init.get('ai_pattern', 'N/A')}\n"
+            f"- Status: {init.get('status', 'N/A')}\n"
+            f"- Similarity Score: {init['similarity_percentage']}%"
+            for init in similar_initiatives[:10]  # Top 10
+        ])
+        
+        prompt = f"""
+You are an AI Project Manager helping match a business problem to the best existing initiative.
+
+Business Problem:
+{business_problem}
+
+Classified AI Pattern: {ai_pattern}
+
+Similar Initiatives Found:
+{initiatives_text}
+
+Analyze these initiatives and recommend the BEST match. Consider:
+1. Semantic similarity score
+2. AI pattern alignment
+3. Business objective alignment
+4. Initiative status (prefer 'ideation' or 'planning' over completed)
+5. Potential for reuse or extension
+
+Respond in JSON format:
+{{
+    "recommended_initiative_id": <initiative_id>,
+    "confidence": <0.0-1.0>,
+    "reasoning": "<detailed explanation of why this is the best match>",
+    "alignment_factors": [
+        {{"factor": "...", "score": <0-100>, "explanation": "..."}}
+    ],
+    "ranked_alternatives": [
+        {{"initiative_id": <id>, "rank": 1, "reason": "..."}}
+    ],
+    "concerns": ["concern1", "concern2"],
+    "recommendations": ["recommendation1", "recommendation2"]
+}}
+"""
+        
+        try:
+            response = await self._call_openai(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3
+            )
+            
+            result = self._parse_json_response(response)
+            self._log_agent_call("recommend_best_initiative", {
+                "business_problem": business_problem[:100],
+                "similar_count": len(similar_initiatives)
+            }, result)
+            
+            return self._format_success_response(
+                data=result,
+                message="Initiative recommendation completed"
+            )
+        except Exception as e:
+            return self._handle_error(e)
 
     async def analyze_data_feasibility(
         self,
