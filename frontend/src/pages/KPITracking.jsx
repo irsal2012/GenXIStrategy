@@ -1,55 +1,71 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
+  Alert,
   Box,
-  Container,
-  Typography,
-  Paper,
-  Grid,
+  Button,
   Card,
   CardContent,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
   Chip,
-  LinearProgress,
-  Alert,
-  IconButton,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
+  Grid,
+  IconButton,
+  LinearProgress,
+  MenuItem,
+  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
+  Typography,
 } from '@mui/material';
 import {
-  TrendingUp,
-  TrendingDown,
   Add,
+  CheckCircle,
+  Error as ErrorIcon,
   Psychology,
   Timeline as TimelineIcon,
-  CheckCircle,
+  TrendingDown,
+  TrendingUp,
   Warning,
-  Error as ErrorIcon,
 } from '@mui/icons-material';
 import {
-  getInitiativeKPIs,
   createKPIBaseline,
-  recordKPIMeasurement,
-  getKPIMeasurements,
   explainVariance,
+  getInitiativeKPIs,
+  getKPIMeasurements,
+  recordKPIMeasurement,
 } from '../store/slices/benefitsSlice';
 import { getInitiatives } from '../store/slices/initiativesSlice';
 
+// Backend KPI contract uses: name/category/unit and measurement actual_value.
+// Normalize fields here so the UI never renders blank due to shape mismatches.
+const normalizeKpi = (kpi) => ({
+  ...kpi,
+  displayName: kpi?.name ?? kpi?.kpi_name ?? 'Unnamed KPI',
+  displayCategory: kpi?.category ?? kpi?.kpi_category ?? 'financial',
+  displayUnit: kpi?.unit ?? kpi?.unit_of_measure ?? '',
+});
+
+const normalizeMeasurement = (m) => ({
+  ...m,
+  displayValue: m?.actual_value ?? m?.measured_value,
+});
+
 const KPITracking = () => {
   const dispatch = useDispatch();
+
   const { kpis, kpiMeasurements, aiInsights, loading, error } = useSelector((state) => state.benefits);
-  const { initiatives } = useSelector((state) => state.initiatives);
+  // initiativesSlice stores the list at `items`.
+  const initiatives = useSelector((state) => state.initiatives.items) || [];
 
   const [selectedInitiative, setSelectedInitiative] = useState('');
   const [openKPIDialog, setOpenKPIDialog] = useState(false);
@@ -57,23 +73,26 @@ const KPITracking = () => {
   const [selectedKPI, setSelectedKPI] = useState(null);
   const [showVarianceExplanation, setShowVarianceExplanation] = useState(false);
 
+  // Backend expects: name, category, unit, baseline_date, target_date, measurement_frequency
   const [kpiForm, setKpiForm] = useState({
-    kpi_name: '',
-    kpi_category: 'financial',
+    name: '',
+    category: 'financial',
     baseline_value: '',
     target_value: '',
-    unit_of_measure: '',
+    unit: '',
     measurement_frequency: 'monthly',
-    baseline_source: '',
-    target_rationale: '',
+    baseline_date: new Date().toISOString().slice(0, 10),
+    target_date: new Date(new Date().setMonth(new Date().getMonth() + 3)).toISOString().slice(0, 10),
+    description: '',
+    owner: '',
   });
 
+  // Backend expects: measurement_date, actual_value, notes, recorded_by
   const [measurementForm, setMeasurementForm] = useState({
-    measured_value: '',
-    data_source: '',
-    measurement_method: '',
-    confidence_level: 'high',
+    actual_value: '',
+    measurement_date: new Date().toISOString().slice(0, 10),
     notes: '',
+    recorded_by: '',
   });
 
   useEffect(() => {
@@ -86,72 +105,92 @@ const KPITracking = () => {
     }
   }, [dispatch, selectedInitiative]);
 
+  const selectedInitiativeObj = useMemo(
+    () => initiatives.find((i) => String(i.id) === String(selectedInitiative)) || null,
+    [initiatives, selectedInitiative]
+  );
+
   const handleCreateKPI = async () => {
     if (!selectedInitiative) return;
-    
-    await dispatch(createKPIBaseline({
-      initiative_id: selectedInitiative,
-      ...kpiForm,
-      baseline_value: parseFloat(kpiForm.baseline_value),
-      target_value: parseFloat(kpiForm.target_value),
-    }));
-    
+
+    await dispatch(
+      createKPIBaseline({
+        initiative_id: Number(selectedInitiative),
+        ...kpiForm,
+        baseline_value: parseFloat(kpiForm.baseline_value),
+        target_value: parseFloat(kpiForm.target_value),
+        baseline_date: new Date(kpiForm.baseline_date).toISOString(),
+        target_date: new Date(kpiForm.target_date).toISOString(),
+      })
+    );
+
     setOpenKPIDialog(false);
     setKpiForm({
-      kpi_name: '',
-      kpi_category: 'financial',
+      name: '',
+      category: 'financial',
       baseline_value: '',
       target_value: '',
-      unit_of_measure: '',
+      unit: '',
       measurement_frequency: 'monthly',
-      baseline_source: '',
-      target_rationale: '',
+      baseline_date: new Date().toISOString().slice(0, 10),
+      target_date: new Date(new Date().setMonth(new Date().getMonth() + 3)).toISOString().slice(0, 10),
+      description: '',
+      owner: '',
     });
   };
 
   const handleRecordMeasurement = async () => {
     if (!selectedKPI) return;
-    
-    await dispatch(recordKPIMeasurement({
-      kpiId: selectedKPI.id,
-      measurementData: {
-        ...measurementForm,
-        measured_value: parseFloat(measurementForm.measured_value),
-      },
-    }));
-    
+
+    await dispatch(
+      recordKPIMeasurement({
+        kpiId: selectedKPI.id,
+        measurementData: {
+          kpi_baseline_id: selectedKPI.id,
+          measurement_date: new Date(measurementForm.measurement_date).toISOString(),
+          actual_value: parseFloat(measurementForm.actual_value),
+          notes: measurementForm.notes,
+          recorded_by: measurementForm.recorded_by || undefined,
+        },
+      })
+    );
+
     setOpenMeasurementDialog(false);
     setMeasurementForm({
-      measured_value: '',
-      data_source: '',
-      measurement_method: '',
-      confidence_level: 'high',
+      actual_value: '',
+      measurement_date: new Date().toISOString().slice(0, 10),
       notes: '',
+      recorded_by: '',
     });
-    
-    // Refresh measurements
+
     dispatch(getKPIMeasurements(selectedKPI.id));
   };
 
-  const handleExplainVariance = async (kpi) => {
-    const measurements = kpiMeasurements[kpi.id] || [];
-    await dispatch(explainVariance({
-      kpi_baseline_id: kpi.id,
-      kpi_name: kpi.kpi_name,
-      baseline_value: kpi.baseline_value,
-      target_value: kpi.target_value,
-      measurements: measurements,
-    }));
+  const handleExplainVariance = async (kpiRaw) => {
+    const kpi = normalizeKpi(kpiRaw);
+    const measurements = (kpiMeasurements[kpi.id] || []).map(normalizeMeasurement);
+
+    const latest = measurements.length ? measurements[0] : null;
+    await dispatch(
+      explainVariance({
+        kpi_id: kpi.id,
+        expected_value: kpi.target_value,
+        actual_value: latest?.displayValue ?? kpi.baseline_value,
+        context: `Initiative ${selectedInitiativeObj?.title || selectedInitiative}. Measurements: ${measurements.length}`,
+      })
+    );
     setShowVarianceExplanation(true);
   };
 
-  const calculateVariance = (kpi) => {
-    const measurements = kpiMeasurements[kpi.id] || [];
+  const calculateVariance = (kpiRaw) => {
+    const kpi = normalizeKpi(kpiRaw);
+    const measurements = (kpiMeasurements[kpi.id] || []).map(normalizeMeasurement);
     if (measurements.length === 0) return null;
-    
-    const latestMeasurement = measurements[measurements.length - 1];
-    const variance = ((latestMeasurement.measured_value - kpi.target_value) / kpi.target_value) * 100;
-    return variance;
+
+    const latestMeasurement = measurements[0];
+    const latestValue = latestMeasurement.displayValue;
+    if (typeof latestValue !== 'number' || !isFinite(latestValue) || kpi.target_value === 0) return null;
+    return ((latestValue - kpi.target_value) / kpi.target_value) * 100;
   };
 
   const getVarianceStatus = (variance) => {
@@ -163,19 +202,27 @@ const KPITracking = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'on_track': return 'success';
-      case 'at_risk': return 'warning';
-      case 'off_track': return 'error';
-      default: return 'default';
+      case 'on_track':
+        return 'success';
+      case 'at_risk':
+        return 'warning';
+      case 'off_track':
+        return 'error';
+      default:
+        return 'default';
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'on_track': return <CheckCircle />;
-      case 'at_risk': return <Warning />;
-      case 'off_track': return <ErrorIcon />;
-      default: return null;
+      case 'on_track':
+        return <CheckCircle />;
+      case 'at_risk':
+        return <Warning />;
+      case 'off_track':
+        return <ErrorIcon />;
+      default:
+        return null;
     }
   };
 
@@ -192,11 +239,10 @@ const KPITracking = () => {
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
+          {typeof error === 'string' ? error : JSON.stringify(error)}
         </Alert>
       )}
 
-      {/* Initiative Selector */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} md={8}>
@@ -233,7 +279,6 @@ const KPITracking = () => {
 
       {loading.kpis && <LinearProgress sx={{ mb: 3 }} />}
 
-      {/* KPI Cards */}
       {selectedInitiative && kpis.length === 0 && !loading.kpis && (
         <Paper sx={{ p: 6, textAlign: 'center' }}>
           <TrendingUp sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
@@ -243,22 +288,30 @@ const KPITracking = () => {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             Start tracking value by adding your first KPI
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => setOpenKPIDialog(true)}
-          >
+          <Button variant="contained" startIcon={<Add />} onClick={() => setOpenKPIDialog(true)}>
             Add First KPI
           </Button>
         </Paper>
       )}
 
+      {!selectedInitiative && (
+        <Paper sx={{ p: 6, textAlign: 'center' }}>
+          <Typography variant="h6" gutterBottom>
+            Select an Initiative
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Choose an initiative above to view and manage its KPI baselines and measurements.
+          </Typography>
+        </Paper>
+      )}
+
       <Grid container spacing={3}>
-        {kpis.map((kpi) => {
+        {kpis.map((kpiRaw) => {
+          const kpi = normalizeKpi(kpiRaw);
           const variance = calculateVariance(kpi);
           const status = getVarianceStatus(variance);
-          const measurements = kpiMeasurements[kpi.id] || [];
-          const latestMeasurement = measurements.length > 0 ? measurements[measurements.length - 1] : null;
+          const measurements = (kpiMeasurements[kpi.id] || []).map(normalizeMeasurement);
+          const latestMeasurement = measurements.length > 0 ? measurements[0] : null;
 
           return (
             <Grid item xs={12} md={6} lg={4} key={kpi.id}>
@@ -266,19 +319,13 @@ const KPITracking = () => {
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                     <Typography variant="h6" sx={{ flex: 1 }}>
-                      {kpi.kpi_name}
+                      {kpi.displayName}
                     </Typography>
-                    <Chip
-                      label={kpi.kpi_category}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
+                    <Chip label={kpi.displayCategory} size="small" color="primary" variant="outlined" />
                   </Box>
 
                   <Divider sx={{ my: 2 }} />
 
-                  {/* Baseline → Target → Actual */}
                   <Box sx={{ mb: 2 }}>
                     <Grid container spacing={2}>
                       <Grid item xs={4}>
@@ -286,7 +333,7 @@ const KPITracking = () => {
                           Baseline
                         </Typography>
                         <Typography variant="h6">
-                          {kpi.baseline_value} {kpi.unit_of_measure}
+                          {kpi.baseline_value} {kpi.displayUnit}
                         </Typography>
                       </Grid>
                       <Grid item xs={4}>
@@ -294,7 +341,7 @@ const KPITracking = () => {
                           Target
                         </Typography>
                         <Typography variant="h6">
-                          {kpi.target_value} {kpi.unit_of_measure}
+                          {kpi.target_value} {kpi.displayUnit}
                         </Typography>
                       </Grid>
                       <Grid item xs={4}>
@@ -302,20 +349,17 @@ const KPITracking = () => {
                           Actual
                         </Typography>
                         <Typography variant="h6">
-                          {latestMeasurement ? `${latestMeasurement.measured_value} ${kpi.unit_of_measure}` : 'N/A'}
+                          {latestMeasurement ? `${latestMeasurement.displayValue} ${kpi.displayUnit}` : 'N/A'}
                         </Typography>
                       </Grid>
                     </Grid>
                   </Box>
 
-                  {/* Variance */}
                   {variance !== null && (
                     <Box sx={{ mb: 2 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                         {variance >= 0 ? <TrendingUp color="success" /> : <TrendingDown color="error" />}
-                        <Typography variant="body2">
-                          Variance: {variance.toFixed(1)}%
-                        </Typography>
+                        <Typography variant="body2">Variance: {variance.toFixed(1)}%</Typography>
                       </Box>
                       <Chip
                         icon={getStatusIcon(status)}
@@ -326,12 +370,10 @@ const KPITracking = () => {
                     </Box>
                   )}
 
-                  {/* Measurement Info */}
                   <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
                     Frequency: {kpi.measurement_frequency} | Measurements: {measurements.length}
                   </Typography>
 
-                  {/* Actions */}
                   <Box sx={{ display: 'flex', gap: 1 }}>
                     <Button
                       size="small"
@@ -370,17 +412,12 @@ const KPITracking = () => {
         })}
       </Grid>
 
-      {/* AI Variance Explanation */}
       {showVarianceExplanation && aiInsights.varianceExplanation && (
         <Paper sx={{ p: 3, mt: 3, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
             <Psychology />
             <Typography variant="h6">AI Variance Explanation</Typography>
-            <Button
-              size="small"
-              onClick={() => setShowVarianceExplanation(false)}
-              sx={{ ml: 'auto', color: 'inherit' }}
-            >
+            <Button size="small" onClick={() => setShowVarianceExplanation(false)} sx={{ ml: 'auto', color: 'inherit' }}>
               Close
             </Button>
           </Box>
@@ -390,11 +427,10 @@ const KPITracking = () => {
         </Paper>
       )}
 
-      {/* Measurements Table for Selected KPI */}
       {selectedKPI && kpiMeasurements[selectedKPI.id] && (
         <Paper sx={{ p: 3, mt: 3 }}>
           <Typography variant="h6" gutterBottom>
-            Measurements for {selectedKPI.kpi_name}
+            Measurements for {normalizeKpi(selectedKPI).displayName}
           </Typography>
           <TableContainer>
             <Table>
@@ -403,32 +439,41 @@ const KPITracking = () => {
                   <TableCell>Date</TableCell>
                   <TableCell>Value</TableCell>
                   <TableCell>Variance</TableCell>
-                  <TableCell>Confidence</TableCell>
-                  <TableCell>Source</TableCell>
+                  <TableCell>Recorded By</TableCell>
+                  <TableCell>Notes</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {kpiMeasurements[selectedKPI.id].map((measurement) => (
-                  <TableRow key={measurement.id}>
-                    <TableCell>
-                      {new Date(measurement.measurement_date).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      {measurement.measured_value} {selectedKPI.unit_of_measure}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={`${measurement.variance_percentage?.toFixed(1)}%`}
-                        size="small"
-                        color={Math.abs(measurement.variance_percentage) <= 5 ? 'success' : 'warning'}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip label={measurement.confidence_level} size="small" />
-                    </TableCell>
-                    <TableCell>{measurement.data_source}</TableCell>
-                  </TableRow>
-                ))}
+                {kpiMeasurements[selectedKPI.id].map((mRaw) => {
+                  const m = normalizeMeasurement(mRaw);
+                  const kpi = normalizeKpi(selectedKPI);
+                  const variancePct =
+                    kpi.target_value && typeof m.displayValue === 'number'
+                      ? ((m.displayValue - kpi.target_value) / kpi.target_value) * 100
+                      : null;
+
+                  return (
+                    <TableRow key={m.id}>
+                      <TableCell>{new Date(m.measurement_date).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        {m.displayValue} {kpi.displayUnit}
+                      </TableCell>
+                      <TableCell>
+                        {variancePct === null ? (
+                          '—'
+                        ) : (
+                          <Chip
+                            label={`${variancePct.toFixed(1)}%`}
+                            size="small"
+                            color={Math.abs(variancePct) <= 5 ? 'success' : 'warning'}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell>{m.recorded_by || '—'}</TableCell>
+                      <TableCell>{m.notes || '—'}</TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>
@@ -444,8 +489,8 @@ const KPITracking = () => {
               <TextField
                 fullWidth
                 label="KPI Name"
-                value={kpiForm.kpi_name}
-                onChange={(e) => setKpiForm({ ...kpiForm, kpi_name: e.target.value })}
+                value={kpiForm.name}
+                onChange={(e) => setKpiForm({ ...kpiForm, name: e.target.value })}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -453,22 +498,22 @@ const KPITracking = () => {
                 select
                 fullWidth
                 label="Category"
-                value={kpiForm.kpi_category}
-                onChange={(e) => setKpiForm({ ...kpiForm, kpi_category: e.target.value })}
+                value={kpiForm.category}
+                onChange={(e) => setKpiForm({ ...kpiForm, category: e.target.value })}
               >
                 <MenuItem value="financial">Financial</MenuItem>
                 <MenuItem value="operational">Operational</MenuItem>
                 <MenuItem value="customer">Customer</MenuItem>
-                <MenuItem value="quality">Quality</MenuItem>
-                <MenuItem value="efficiency">Efficiency</MenuItem>
+                <MenuItem value="employee">Employee</MenuItem>
+                <MenuItem value="strategic">Strategic</MenuItem>
               </TextField>
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
                 label="Unit of Measure"
-                value={kpiForm.unit_of_measure}
-                onChange={(e) => setKpiForm({ ...kpiForm, unit_of_measure: e.target.value })}
+                value={kpiForm.unit}
+                onChange={(e) => setKpiForm({ ...kpiForm, unit: e.target.value })}
                 placeholder="e.g., USD, hours, %"
               />
             </Grid>
@@ -493,10 +538,10 @@ const KPITracking = () => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Baseline Source"
-                value={kpiForm.baseline_source}
-                onChange={(e) => setKpiForm({ ...kpiForm, baseline_source: e.target.value })}
-                placeholder="Where did the baseline come from?"
+                label="Owner (optional)"
+                value={kpiForm.owner}
+                onChange={(e) => setKpiForm({ ...kpiForm, owner: e.target.value })}
+                placeholder="Who owns this KPI?"
               />
             </Grid>
             <Grid item xs={12}>
@@ -504,10 +549,29 @@ const KPITracking = () => {
                 fullWidth
                 multiline
                 rows={2}
-                label="Target Rationale"
-                value={kpiForm.target_rationale}
-                onChange={(e) => setKpiForm({ ...kpiForm, target_rationale: e.target.value })}
-                placeholder="Why this target?"
+                label="Description (optional)"
+                value={kpiForm.description}
+                onChange={(e) => setKpiForm({ ...kpiForm, description: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                type="date"
+                label="Baseline Date"
+                value={kpiForm.baseline_date}
+                onChange={(e) => setKpiForm({ ...kpiForm, baseline_date: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                type="date"
+                label="Target Date"
+                value={kpiForm.target_date}
+                onChange={(e) => setKpiForm({ ...kpiForm, target_date: e.target.value })}
+                InputLabelProps={{ shrink: true }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -522,6 +586,7 @@ const KPITracking = () => {
                 <MenuItem value="weekly">Weekly</MenuItem>
                 <MenuItem value="monthly">Monthly</MenuItem>
                 <MenuItem value="quarterly">Quarterly</MenuItem>
+                <MenuItem value="annually">Annually</MenuItem>
               </TextField>
             </Grid>
           </Grid>
@@ -543,41 +608,28 @@ const KPITracking = () => {
               <TextField
                 fullWidth
                 type="number"
-                label="Measured Value"
-                value={measurementForm.measured_value}
-                onChange={(e) => setMeasurementForm({ ...measurementForm, measured_value: e.target.value })}
+                label="Actual Value"
+                value={measurementForm.actual_value}
+                onChange={(e) => setMeasurementForm({ ...measurementForm, actual_value: e.target.value })}
               />
             </Grid>
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Data Source"
-                value={measurementForm.data_source}
-                onChange={(e) => setMeasurementForm({ ...measurementForm, data_source: e.target.value })}
-                placeholder="Where did this data come from?"
+                type="date"
+                label="Measurement Date"
+                value={measurementForm.measurement_date}
+                onChange={(e) => setMeasurementForm({ ...measurementForm, measurement_date: e.target.value })}
+                InputLabelProps={{ shrink: true }}
               />
             </Grid>
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Measurement Method"
-                value={measurementForm.measurement_method}
-                onChange={(e) => setMeasurementForm({ ...measurementForm, measurement_method: e.target.value })}
-                placeholder="How was this measured?"
+                label="Recorded By (optional)"
+                value={measurementForm.recorded_by}
+                onChange={(e) => setMeasurementForm({ ...measurementForm, recorded_by: e.target.value })}
               />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                select
-                fullWidth
-                label="Confidence Level"
-                value={measurementForm.confidence_level}
-                onChange={(e) => setMeasurementForm({ ...measurementForm, confidence_level: e.target.value })}
-              >
-                <MenuItem value="high">High</MenuItem>
-                <MenuItem value="medium">Medium</MenuItem>
-                <MenuItem value="low">Low</MenuItem>
-              </TextField>
             </Grid>
             <Grid item xs={12}>
               <TextField

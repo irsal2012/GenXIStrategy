@@ -49,6 +49,12 @@ const BenefitsDashboard = () => {
   const { benefits, benefitsSummary, aiInsights, loading, error } = useSelector((state) => state.benefits);
   const { initiatives } = useSelector((state) => state.initiatives);
 
+  // Defensive defaults so the page never crashes during initial load or on bad API payloads.
+  const benefitsList = Array.isArray(benefits) ? benefits : [];
+  const initiativesList = Array.isArray(initiatives) ? initiatives : [];
+  const safeAIInsights = aiInsights || {};
+  const safeLoading = loading || {};
+
   const [selectedInitiative, setSelectedInitiative] = useState('');
   const [openBenefitDialog, setOpenBenefitDialog] = useState(false);
   const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
@@ -122,26 +128,30 @@ const BenefitsDashboard = () => {
 
   const handleForecast = async () => {
     if (!selectedInitiative) return;
-    
-    await dispatch(forecastRealization({
-      initiative_id: selectedInitiative,
-      benefits: benefits,
-    }));
+
+    await dispatch(
+      forecastRealization({
+        initiative_id: selectedInitiative,
+        benefits: benefitsList,
+      })
+    );
     setShowForecast(true);
   };
 
   const handleBenchmark = async () => {
     if (!selectedInitiative) return;
-    
-    const initiative = initiatives.find(i => i.id === parseInt(selectedInitiative));
+
+    const initiative = initiativesList.find((i) => i.id === parseInt(selectedInitiative));
     if (!initiative) return;
-    
-    await dispatch(benchmarkPerformance({
-      initiative_id: selectedInitiative,
-      ai_type: initiative.ai_type,
-      industry: initiative.strategic_domain,
-      benefits: benefits,
-    }));
+
+    await dispatch(
+      benchmarkPerformance({
+        initiative_id: selectedInitiative,
+        ai_type: initiative.ai_type,
+        industry: initiative.strategic_domain,
+        benefits: benefitsList,
+      })
+    );
     setShowBenchmark(true);
   };
 
@@ -190,8 +200,8 @@ const BenefitsDashboard = () => {
     return (benefit.realized_value / benefit.expected_value) * 100;
   };
 
-  const totalExpectedValue = benefits.reduce((sum, b) => sum + (b.expected_value || 0), 0);
-  const totalRealizedValue = benefits.reduce((sum, b) => sum + (b.realized_value || 0), 0);
+  const totalExpectedValue = benefitsList.reduce((sum, b) => sum + (b.expected_value || 0), 0);
+  const totalRealizedValue = benefitsList.reduce((sum, b) => sum + (b.realized_value || 0), 0);
   const overallRealization = totalExpectedValue > 0 ? (totalRealizedValue / totalExpectedValue) * 100 : 0;
 
   return (
@@ -225,7 +235,7 @@ const BenefitsDashboard = () => {
               <MenuItem value="">
                 <em>Select an initiative</em>
               </MenuItem>
-              {initiatives.map((initiative) => (
+              {initiativesList.map((initiative) => (
                 <MenuItem key={initiative.id} value={initiative.id}>
                   {initiative.title}
                 </MenuItem>
@@ -246,7 +256,7 @@ const BenefitsDashboard = () => {
               <Button
                 variant="outlined"
                 startIcon={<Psychology />}
-                disabled={!selectedInitiative || benefits.length === 0}
+                disabled={!selectedInitiative || benefitsList.length === 0}
                 onClick={handleForecast}
               >
                 Forecast
@@ -254,7 +264,7 @@ const BenefitsDashboard = () => {
               <Button
                 variant="outlined"
                 startIcon={<Psychology />}
-                disabled={!selectedInitiative || benefits.length === 0}
+                disabled={!selectedInitiative || benefitsList.length === 0}
                 onClick={handleBenchmark}
               >
                 Benchmark
@@ -264,10 +274,10 @@ const BenefitsDashboard = () => {
         </Grid>
       </Paper>
 
-      {loading.benefits && <LinearProgress sx={{ mb: 3 }} />}
+      {safeLoading.benefits && <LinearProgress sx={{ mb: 3 }} />}
 
       {/* Summary Cards */}
-      {selectedInitiative && benefits.length > 0 && (
+      {selectedInitiative && benefitsList.length > 0 && (
         <Grid container spacing={3} sx={{ mb: 3 }}>
           <Grid item xs={12} md={4}>
             <Card>
@@ -318,7 +328,7 @@ const BenefitsDashboard = () => {
       )}
 
       {/* Empty State */}
-      {selectedInitiative && benefits.length === 0 && !loading.benefits && (
+      {selectedInitiative && benefitsList.length === 0 && !safeLoading.benefits && (
         <Paper sx={{ p: 6, textAlign: 'center' }}>
           <AccountBalance sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
           <Typography variant="h6" gutterBottom>
@@ -339,7 +349,7 @@ const BenefitsDashboard = () => {
 
       {/* Benefits List */}
       <Grid container spacing={3}>
-        {benefits.map((benefit) => {
+        {benefitsList.map((benefit) => {
           const realizationPercentage = calculateRealizationPercentage(benefit);
           
           return (
@@ -441,7 +451,7 @@ const BenefitsDashboard = () => {
       </Grid>
 
       {/* AI Forecast */}
-      {showForecast && aiInsights.forecastRealization && (
+      {showForecast && safeAIInsights.forecastRealization && (
         <Paper sx={{ p: 3, mt: 3, bgcolor: 'info.light', color: 'info.contrastText' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
             <Psychology />
@@ -455,13 +465,13 @@ const BenefitsDashboard = () => {
             </Button>
           </Box>
           <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-            {JSON.stringify(aiInsights.forecastRealization, null, 2)}
+            {JSON.stringify(safeAIInsights.forecastRealization, null, 2)}
           </Typography>
         </Paper>
       )}
 
       {/* AI Benchmark */}
-      {showBenchmark && aiInsights.benchmark && (
+      {showBenchmark && safeAIInsights.benchmark && (
         <Paper sx={{ p: 3, mt: 3, bgcolor: 'secondary.light', color: 'secondary.contrastText' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
             <Psychology />
@@ -475,7 +485,7 @@ const BenefitsDashboard = () => {
             </Button>
           </Box>
           <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-            {JSON.stringify(aiInsights.benchmark, null, 2)}
+            {JSON.stringify(safeAIInsights.benchmark, null, 2)}
           </Typography>
         </Paper>
       )}

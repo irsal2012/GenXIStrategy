@@ -84,8 +84,12 @@ def record_kpi_measurement(
     kpi = BenefitsService.get_kpi_baseline(db, kpi_id)
     if not kpi:
         raise HTTPException(status_code=404, detail="KPI baseline not found")
-    
-    return BenefitsService.record_kpi_measurement(db, measurement_data)
+
+    # Ensure path param is the source of truth (prevents client mismatch).
+    measurement_payload = measurement_data.model_dump()
+    measurement_payload["kpi_baseline_id"] = kpi_id
+
+    return BenefitsService.record_kpi_measurement(db, KPIMeasurementCreate(**measurement_payload))
 
 
 @router.get("/kpis/{kpi_id}/measurements", response_model=List[KPIMeasurement])

@@ -426,7 +426,9 @@ const benefitsSlice = createSlice({
       })
       .addCase(getInitiativeBenefits.fulfilled, (state, action) => {
         state.loading.benefits = false;
-        state.benefits = action.payload;
+        // Backend should return an array, but defensively coerce to prevent UI crashes
+        // (e.g., if an error payload leaks through or schema changes).
+        state.benefits = Array.isArray(action.payload) ? action.payload : [];
       })
       .addCase(getInitiativeBenefits.rejected, (state, action) => {
         state.loading.benefits = false;
@@ -439,7 +441,7 @@ const benefitsSlice = createSlice({
         }
       })
       .addCase(getBenefitsSummary.fulfilled, (state, action) => {
-        state.benefitsSummary = action.payload;
+        state.benefitsSummary = action.payload ?? null;
       });
 
     // Confidence Scoring Actions
