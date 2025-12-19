@@ -23,6 +23,12 @@ from app.models.reporting import (
     ReportingMetric, NarrativeTemplate, ReportSchedule,
     DashboardType, ReportType, ReportStatus, MetricType, ExportFormat
 )
+from app.models.ai_project import (
+    BusinessUnderstanding, DataUnderstanding, DataPreparation,
+    ModelDevelopment, ModelEvaluation, ModelDeployment, ModelMonitoring,
+    GoNoGoDecision, DataFeasibilityStatus, PipelineStatus, ModelStatus,
+    DeploymentEnvironment, DeploymentType, DeploymentStatus, MonitoringStatus
+)
 
 __all__ = [
     "User",
@@ -84,4 +90,19 @@ __all__ = [
     "ReportStatus",
     "MetricType",
     "ExportFormat",
+    "BusinessUnderstanding",
+    "DataUnderstanding",
+    "DataPreparation",
+    "ModelDevelopment",
+    "ModelEvaluation",
+    "ModelDeployment",
+    "ModelMonitoring",
+    "GoNoGoDecision",
+    "DataFeasibilityStatus",
+    "PipelineStatus",
+    "ModelStatus",
+    "DeploymentEnvironment",
+    "DeploymentType",
+    "DeploymentStatus",
+    "MonitoringStatus",
 ]

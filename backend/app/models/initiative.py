@@ -99,3 +99,9 @@ class Initiative(Base):
     benefit_realizations = relationship("BenefitRealization", back_populates="initiative", cascade="all, delete-orphan")
     value_leakages = relationship("ValueLeakage", back_populates="initiative", cascade="all, delete-orphan")
     post_implementation_reviews = relationship("PostImplementationReview", back_populates="initiative", cascade="all, delete-orphan")
+    
+    # Module 7: AI Project Management relationships
+    business_understanding = relationship("BusinessUnderstanding", back_populates="initiative", uselist=False, cascade="all, delete-orphan")
+    data_understanding = relationship("DataUnderstanding", back_populates="initiative", cascade="all, delete-orphan")
+    data_preparation = relationship("DataPreparation", back_populates="initiative", cascade="all, delete-orphan")
+    model_development = relationship("ModelDevelopment", back_populates="initiative", cascade="all, delete-orphan")

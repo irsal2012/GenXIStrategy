@@ -8,6 +8,7 @@ from app.core.database import Base
 class UserRole(str, enum.Enum):
     CAIO = "caio"
     AI_LEAD = "ai_lead"
+    AI_PROJECT_MANAGER = "ai_project_manager"
     COMPLIANCE_OFFICER = "compliance_officer"
     EXECUTIVE = "executive"
 
