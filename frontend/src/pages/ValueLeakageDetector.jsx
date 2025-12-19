@@ -39,7 +39,9 @@ import { getInitiatives } from '../store/slices/initiativesSlice';
 const ValueLeakageDetector = () => {
   const dispatch = useDispatch();
   const { leakages, aiInsights, loading, error } = useSelector((state) => state.benefits);
-  const { initiatives } = useSelector((state) => state.initiatives);
+  // initiativesSlice stores list under `items` (legacy pages sometimes read `initiatives`).
+  // If we read the wrong key, `initiatives.map(...)` will throw and the page renders blank.
+  const initiatives = useSelector((state) => state.initiatives.items) || [];
 
   const [selectedInitiative, setSelectedInitiative] = useState('');
   const [openLeakageDialog, setOpenLeakageDialog] = useState(false);
@@ -148,9 +150,14 @@ const ValueLeakageDetector = () => {
     return type.replace(/_/g, ' ').toUpperCase();
   };
 
-  const totalValueAtRisk = leakages.reduce((sum, l) => sum + (l.estimated_value_at_risk || 0), 0);
-  const criticalLeakages = leakages.filter(l => l.severity === 'critical').length;
-  const resolvedLeakages = leakages.filter(l => l.status === 'resolved').length;
+  const safeLeakages = Array.isArray(leakages) ? leakages : [];
+
+  const totalValueAtRisk = safeLeakages.reduce(
+    (sum, l) => sum + (l?.estimated_value_at_risk || 0),
+    0
+  );
+  const criticalLeakages = safeLeakages.filter((l) => l?.severity === 'critical').length;
+  const resolvedLeakages = safeLeakages.filter((l) => l?.status === 'resolved').length;
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -298,7 +305,7 @@ const ValueLeakageDetector = () => {
 
       {/* Leakages List */}
       <Grid container spacing={3}>
-        {leakages.map((leakage) => (
+        {safeLeakages.map((leakage) => (
           <Grid item xs={12} md={6} key={leakage.id}>
             <Card>
               <CardContent>
