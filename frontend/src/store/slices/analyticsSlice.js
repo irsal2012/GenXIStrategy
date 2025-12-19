@@ -59,7 +59,6 @@ const analyticsSlice = createSlice({
       // Portfolio summary
       .addCase(fetchPortfolioSummary.pending, (state) => {
         state.loading = true
-        state.error = null
       })
       .addCase(fetchPortfolioSummary.fulfilled, (state, action) => {
         state.loading = false
@@ -67,7 +66,13 @@ const analyticsSlice = createSlice({
       })
       .addCase(fetchPortfolioSummary.rejected, (state, action) => {
         state.loading = false
-        state.error = action.payload
+        // Don't show error if dashboard data loaded successfully
+        if (state.dashboardData) {
+          // Set portfolioSummary to fallback message
+          state.portfolioSummary = { summary: 'Portfolio summary unavailable at this time.' }
+        } else {
+          state.error = action.payload
+        }
       })
   },
 })

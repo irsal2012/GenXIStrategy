@@ -123,8 +123,24 @@ async def get_portfolio_summary(
         ]
     }
     
-    # Generate summary using OpenAI
-    summary = await openai_service.generate_executive_summary(portfolio_data)
+    # Generate summary using OpenAI with error handling
+    try:
+        summary = await openai_service.generate_executive_summary(portfolio_data)
+    except Exception as e:
+        # Log the error but don't fail the request
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed to generate AI summary: {str(e)}")
+        
+        # Provide a fallback summary
+        summary = (
+            f"Portfolio Overview: Currently managing {total_initiatives} initiatives "
+            f"with {active_initiatives} in active development. "
+            f"Total budget allocated: ${portfolio_data['total_budget']:,.0f}. "
+            f"Expected ROI: {portfolio_data['expected_roi']:.1f}%. "
+            f"High-risk items: {high_risk_count}. "
+            f"AI-powered insights temporarily unavailable."
+        )
     
     return {
         "summary": summary,

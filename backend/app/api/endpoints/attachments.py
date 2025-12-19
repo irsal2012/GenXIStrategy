@@ -19,8 +19,8 @@ from app.schemas.attachment import (
 router = APIRouter()
 
 # Configure upload directory
-UPLOAD_DIR = Path("/Users/iimran/Desktop/GenXIStrategy/backend/uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
+UPLOAD_DIR = Path("/Users/iimran/Desktop/CAIOPlatform/backend/uploads")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {

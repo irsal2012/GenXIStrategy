@@ -22,6 +22,7 @@ import BenefitsDashboard from './pages/BenefitsDashboard'
 import ValueLeakageDetector from './pages/ValueLeakageDetector'
 import PostImplementationReviews from './pages/PostImplementationReviews'
 import ExecutiveReporting from './pages/ExecutiveReporting'
+import Analytics from './pages/Analytics'
 
 function PrivateRoute({ children }) {
   // Prefer persisted token so refresh/navigation doesn't incorrectly bounce users to /login.
@@ -71,6 +72,7 @@ function App() {
           <Route path="benefits/leakage" element={<ValueLeakageDetector />} />
           <Route path="benefits/reviews" element={<PostImplementationReviews />} />
           <Route path="reporting" element={<ExecutiveReporting />} />
+          <Route path="analytics" element={<Analytics />} />
         </Route>
       </Routes>
     </Box>
