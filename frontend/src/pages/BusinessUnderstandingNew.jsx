@@ -143,6 +143,43 @@ const BusinessUnderstandingNew = () => {
     }
   }
 
+  // Search initiatives by pattern only (without business problem text)
+  const handleSearchByPattern = async () => {
+    if (!selectedPattern) {
+      setError('Please select an AI pattern first.')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      // Create a generic search query based on the pattern
+      const patternInfo = PMI_PATTERNS.find(p => p.name === selectedPattern)
+      const searchQuery = patternInfo ? patternInfo.description : selectedPattern
+
+      const searchResponse = await axios.post('/ai-projects/pmi-cpmai/find-similar-initiatives', null, {
+        params: {
+          business_problem: searchQuery,
+          ai_pattern: selectedPattern,
+          status_filter: ['ideation', 'planning'],
+          top_k: 10
+        }
+      })
+
+      if (searchResponse.data.success) {
+        const initiatives = searchResponse.data.data.initiatives
+        setSimilarInitiatives(initiatives)
+        setAiRecommendation(null) // Clear AI recommendation for pattern-only search
+        setCurrentStep(WORKFLOW_STEPS.FIND_INITIATIVES)
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Error finding similar initiatives')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Step 4: Link to Initiative
   const handleSelectInitiative = async (initiativeId) => {
     setLoading(true)
@@ -215,7 +252,7 @@ const BusinessUnderstandingNew = () => {
           <textarea
             value={businessProblem}
             onChange={(e) => setBusinessProblem(e.target.value)}
-            rows={8}
+            rows={4}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Example: We need to reduce customer churn by predicting which customers are likely to leave and proactively engaging them with personalized offers. Our current churn rate is 15% annually, and we want to reduce it to under 10%..."
           />
@@ -275,23 +312,32 @@ const BusinessUnderstandingNew = () => {
               Review the AI's suggestion and select the pattern that best fits your business problem.
             </p>
 
-            {/* Dropdown Pattern Selector */}
+            {/* Dropdown Pattern Selector with Button */}
             <div className="space-y-4">
               <label className="block text-sm font-medium text-gray-700">
                 Select AI Pattern
               </label>
-              <select
-                value={selectedPattern || ''}
-                onChange={(e) => setSelectedPattern(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-              >
-                <option value="">-- Select a Pattern --</option>
-                {PMI_PATTERNS.map((pattern) => (
-                  <option key={pattern.name} value={pattern.name}>
-                    {pattern.icon} {pattern.name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex gap-3">
+                <select
+                  value={selectedPattern || ''}
+                  onChange={(e) => setSelectedPattern(e.target.value)}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                >
+                  <option value="">-- Select a Pattern --</option>
+                  {PMI_PATTERNS.map((pattern) => (
+                    <option key={pattern.name} value={pattern.name}>
+                      {pattern.icon} {pattern.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleSearchByPattern}
+                  disabled={loading || !selectedPattern}
+                  className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  {loading ? 'Searching...' : '🔍 Search by Pattern'}
+                </button>
+              </div>
 
               {/* Show selected pattern details */}
               {selectedPattern && (
