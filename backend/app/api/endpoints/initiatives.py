@@ -7,6 +7,7 @@ from app.models.user import User
 from app.models.initiative import Initiative
 from app.schemas.initiative import InitiativeCreate, InitiativeUpdate, Initiative as InitiativeSchema
 from app.services.openai_service import openai_service
+from app.services.semantic_search_service import semantic_search_service
 
 router = APIRouter()
 
@@ -24,7 +25,7 @@ def list_initiatives(
 
 
 @router.post("/", response_model=InitiativeSchema, status_code=status.HTTP_201_CREATED)
-def create_initiative(
+async def create_initiative(
     initiative_in: InitiativeCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
@@ -37,6 +38,22 @@ def create_initiative(
     db.add(initiative)
     db.commit()
     db.refresh(initiative)
+    
+    # Generate embedding for the new initiative
+    try:
+        initiative_data = {
+            "id": initiative.id,
+            "title": initiative.title,
+            "description": initiative.description,
+            "business_objective": initiative.business_objective or "",
+            "ai_pattern": "",  # Will be populated when user goes through PMI-CPMAI workflow
+            "status": initiative.status.value if initiative.status else ""
+        }
+        await semantic_search_service.add_or_update_initiative_embedding(initiative_data)
+    except Exception as e:
+        # Log error but don't fail the initiative creation
+        print(f"Warning: Failed to generate embedding for initiative {initiative.id}: {str(e)}")
+    
     return initiative
 
 
@@ -57,7 +74,7 @@ def get_initiative(
 
 
 @router.put("/{initiative_id}", response_model=InitiativeSchema)
-def update_initiative(
+async def update_initiative(
     initiative_id: int,
     initiative_in: InitiativeUpdate,
     db: Session = Depends(get_db),
@@ -78,6 +95,22 @@ def update_initiative(
     
     db.commit()
     db.refresh(initiative)
+    
+    # Regenerate embedding for the updated initiative
+    try:
+        initiative_data = {
+            "id": initiative.id,
+            "title": initiative.title,
+            "description": initiative.description,
+            "business_objective": initiative.business_objective or "",
+            "ai_pattern": "",  # Will be populated when user goes through PMI-CPMAI workflow
+            "status": initiative.status.value if initiative.status else ""
+        }
+        await semantic_search_service.add_or_update_initiative_embedding(initiative_data)
+    except Exception as e:
+        # Log error but don't fail the initiative update
+        print(f"Warning: Failed to update embedding for initiative {initiative.id}: {str(e)}")
+    
     return initiative
 
 
