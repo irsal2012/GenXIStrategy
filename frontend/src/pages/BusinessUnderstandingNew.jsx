@@ -1,6 +1,38 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from '../api/axios'
+
+import {
+  Alert,
+  Avatar,
+  Box,
+  Button,
+  Card,
+  CardActionArea,
+  CardContent,
+  Chip,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Grid,
+  LinearProgress,
+  Paper,
+  Stack,
+  Step,
+  StepLabel,
+  Stepper,
+  TextField,
+  Typography,
+} from '@mui/material'
+
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import SearchIcon from '@mui/icons-material/Search'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import LinkIcon from '@mui/icons-material/Link'
 
 // PMI-CPMAI Seven Patterns
 const PMI_PATTERNS = [
@@ -57,7 +89,7 @@ const WORKFLOW_STEPS = {
 
 const BusinessUnderstandingNew = () => {
   const navigate = useNavigate()
-  
+
   // Workflow state
   const [currentStep, setCurrentStep] = useState(WORKFLOW_STEPS.DEFINE_PROBLEM)
   const [businessProblem, setBusinessProblem] = useState('')
@@ -68,10 +100,43 @@ const BusinessUnderstandingNew = () => {
   const [selectedInitiative, setSelectedInitiative] = useState(null)
   const [showNoMatchModal, setShowNoMatchModal] = useState(false)
   const [noMatchFeedback, setNoMatchFeedback] = useState('')
-  
+
   // Loading states
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  const minChars = 100
+  const isProblemValid = businessProblem.trim().length >= minChars
+
+  const steps = useMemo(
+    () => [
+      'Describe business problem',
+      'Confirm AI pattern',
+      'Review initiatives',
+      'Link & continue',
+    ],
+    []
+  )
+
+  const stepIndex = useMemo(() => {
+    switch (currentStep) {
+      case WORKFLOW_STEPS.DEFINE_PROBLEM:
+        return 0
+      case WORKFLOW_STEPS.CLASSIFY_PATTERN:
+        return 1
+      case WORKFLOW_STEPS.FIND_INITIATIVES:
+        return 2
+      case WORKFLOW_STEPS.SELECT_INITIATIVE:
+        return 3
+      default:
+        return 0
+    }
+  }, [currentStep])
+
+  const patternMeta = useMemo(() => {
+    if (!selectedPattern) return null
+    return PMI_PATTERNS.find((p) => p.name === selectedPattern) || null
+  }, [selectedPattern])
 
   // Step 1: Define Business Problem
   const handleAnalyzeProblem = async () => {
@@ -226,306 +291,464 @@ const BusinessUnderstandingNew = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <h1 className="text-3xl font-bold text-gray-900">Define your business problem and match it to an existing initiative</h1>
-      </div>
-
-      {/* Error Display */}
-      {error && (
-        <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
-          <p className="text-red-800">{error}</p>
-        </div>
-      )}
-
-      {/* Step 1: Define Business Problem */}
-      {currentStep === WORKFLOW_STEPS.DEFINE_PROBLEM && (
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Step 1: Define Your Business Problem</h2>
-          <p className="text-gray-600 mb-4">
-            Describe the business problem you're trying to solve with AI. Be specific about the challenge, desired outcomes, and context.
-          </p>
-          
-          <textarea
-            value={businessProblem}
-            onChange={(e) => setBusinessProblem(e.target.value)}
-            rows={4}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Example: We need to reduce customer churn by predicting which customers are likely to leave and proactively engaging them with personalized offers. Our current churn rate is 15% annually, and we want to reduce it to under 10%..."
-          />
-          
-          <div className="mt-2 flex justify-between items-center">
-            <span className={`text-sm ${businessProblem.length >= 100 ? 'text-green-600' : 'text-gray-500'}`}>
-              {businessProblem.length} / 100 characters minimum
-            </span>
-          </div>
-
-          <button
-            onClick={handleAnalyzeProblem}
-            disabled={loading || businessProblem.length < 100}
-            className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Analyzing...' : '🤖 Analyze Problem & Classify Pattern'}
-          </button>
-        </div>
-      )}
-
-      {/* Step 2: Classify AI Pattern */}
-      {currentStep === WORKFLOW_STEPS.CLASSIFY_PATTERN && classifiedPattern && (
-        <div className="space-y-6">
-          {/* AI Classification Result */}
-          <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-6">
-            <h2 className="text-2xl font-bold text-purple-900 mb-4">🤖 AI Pattern Classification</h2>
-            <div className="space-y-4">
-              <div>
-                <div className="text-sm text-purple-700 mb-1">Suggested Pattern</div>
-                <div className="text-2xl font-bold text-purple-900">{classifiedPattern.primary_pattern}</div>
-              </div>
-              <div>
-                <div className="text-sm text-purple-700 mb-1">Confidence</div>
-                <div className="text-xl font-bold text-purple-900">{(classifiedPattern.confidence * 100).toFixed(0)}%</div>
-              </div>
-              <div>
-                <div className="text-sm text-purple-700 mb-1 font-semibold">Reasoning</div>
-                <p className="text-purple-800">{classifiedPattern.reasoning}</p>
-              </div>
-              {classifiedPattern.key_indicators && classifiedPattern.key_indicators.length > 0 && (
-                <div>
-                  <div className="text-sm text-purple-700 mb-1 font-semibold">Key Indicators</div>
-                  <ul className="list-disc list-inside space-y-1">
-                    {classifiedPattern.key_indicators.map((indicator, idx) => (
-                      <li key={idx} className="text-purple-800">{indicator}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Pattern Selection */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Step 2: Confirm or Change AI Pattern</h2>
-            <p className="text-gray-600 mb-6">
-              Review the AI's suggestion and select the pattern that best fits your business problem.
-            </p>
-
-            {/* Dropdown Pattern Selector with Button */}
-            <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Select AI Pattern
-              </label>
-              <div className="flex gap-3">
-                <select
-                  value={selectedPattern || ''}
-                  onChange={(e) => setSelectedPattern(e.target.value)}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                >
-                  <option value="">-- Select a Pattern --</option>
-                  {PMI_PATTERNS.map((pattern) => (
-                    <option key={pattern.name} value={pattern.name}>
-                      {pattern.icon} {pattern.name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={handleSearchByPattern}
-                  disabled={loading || !selectedPattern}
-                  className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed whitespace-nowrap"
-                >
-                  {loading ? 'Searching...' : '🔍 Search by Pattern'}
-                </button>
-              </div>
-
-              {/* Show selected pattern details */}
-              {selectedPattern && (
-                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  {PMI_PATTERNS.filter(p => p.name === selectedPattern).map((pattern) => (
-                    <div key={pattern.name}>
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className="text-2xl">{pattern.icon}</span>
-                        <h3 className="font-bold text-lg text-gray-900">{pattern.name}</h3>
-                      </div>
-                      <p className="text-sm text-gray-700 mb-3">{pattern.description}</p>
-                      <div>
-                        <div className="text-xs text-gray-600 font-semibold mb-1">Examples:</div>
-                        <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
-                          {pattern.examples.map((ex, idx) => (
-                            <li key={idx}>{ex}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={handleConfirmPattern}
-              disabled={loading || !selectedPattern}
-              className="mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+    <Container maxWidth="lg" sx={{ py: 3 }}>
+      <Stack spacing={3}>
+        {/* Hero header */}
+        <Paper
+          elevation={0}
+          sx={(theme) => ({
+            p: { xs: 2.5, sm: 3 },
+            borderRadius: 3,
+            border: `1px solid ${theme.palette.divider}`,
+            background:
+              theme.palette.mode === 'dark'
+                ? 'linear-gradient(135deg, rgba(99,102,241,0.18) 0%, rgba(236,72,153,0.10) 45%, rgba(14,165,233,0.10) 100%)'
+                : 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(236,72,153,0.08) 45%, rgba(14,165,233,0.08) 100%)',
+          })}
+        >
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2.5} alignItems={{ sm: 'center' }}>
+            <Avatar
+              sx={(theme) => ({
+                width: 52,
+                height: 52,
+                bgcolor: theme.palette.primary.main,
+              })}
             >
-              {loading ? 'Searching...' : '🔍 Find Similar Initiatives'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 3 & 4: Similar Initiatives & Selection */}
-      {currentStep >= WORKFLOW_STEPS.FIND_INITIATIVES && (
-        <div className="space-y-6">
-          {/* AI Recommendation */}
-          {aiRecommendation && aiRecommendation.recommended_initiative_id && (
-            <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6">
-              <h2 className="text-2xl font-bold text-green-900 mb-4">🤖 AI Recommendation</h2>
-              <div className="space-y-3">
-                <div>
-                  <div className="text-sm text-green-700 mb-1">Recommended Initiative</div>
-                  <div className="text-xl font-bold text-green-900">
-                    Initiative #{aiRecommendation.recommended_initiative_id}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-green-700 mb-1">Confidence</div>
-                  <div className="text-lg font-bold text-green-900">
-                    {(aiRecommendation.confidence * 100).toFixed(0)}%
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-green-700 mb-1 font-semibold">Reasoning</div>
-                  <p className="text-green-800">{aiRecommendation.reasoning}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Similar Initiatives List */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Step 3: Select an Initiative ({similarInitiatives.length} found)
-              </h2>
-              <button
-                onClick={() => setShowNoMatchModal(true)}
-                className="text-sm text-blue-600 hover:text-blue-800 underline"
-              >
-                None of these match?
-              </button>
-            </div>
-
-            {similarInitiatives.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-600">No similar initiatives found.</p>
-                <button
-                  onClick={() => setShowNoMatchModal(true)}
-                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  Provide Feedback
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {similarInitiatives.map((initiative) => (
-                  <div
-                    key={initiative.initiative_id}
-                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                      selectedInitiative === initiative.initiative_id
-                        ? 'border-blue-600 bg-blue-50'
-                        : 'border-gray-300 hover:border-blue-400'
-                    } ${
-                      aiRecommendation?.recommended_initiative_id === initiative.initiative_id
-                        ? 'ring-2 ring-green-400'
-                        : ''
-                    }`}
-                    onClick={() => setSelectedInitiative(initiative.initiative_id)}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <h3 className="font-bold text-lg text-gray-900">{initiative.title}</h3>
-                          {aiRecommendation?.recommended_initiative_id === initiative.initiative_id && (
-                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded">
-                              AI Recommended
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-gray-600 mt-1">{initiative.description}</p>
-                        {initiative.business_objective && (
-                          <p className="text-sm text-gray-500 mt-2">
-                            <strong>Objective:</strong> {initiative.business_objective}
-                          </p>
-                        )}
-                        <div className="flex items-center space-x-4 mt-3 text-sm">
-                          <span className="text-gray-600">
-                            <strong>Status:</strong> {initiative.status}
-                          </span>
-                          {initiative.ai_pattern && (
-                            <span className="text-gray-600">
-                              <strong>Pattern:</strong> {initiative.ai_pattern}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="ml-4 text-right">
-                        <div className="text-2xl font-bold text-blue-600">
-                          {initiative.similarity_percentage}%
-                        </div>
-                        <div className="text-xs text-gray-500">Match</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {selectedInitiative && (
-              <button
-                onClick={() => handleSelectInitiative(selectedInitiative)}
-                disabled={loading}
-                className="mt-6 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
-              >
-                {loading ? 'Linking...' : '✓ Confirm Selection & Continue'}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* No Match Feedback Modal */}
-      {showNoMatchModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">No Good Match Found?</h3>
-            <p className="text-gray-600 mb-4">
-              Please provide feedback about why none of these initiatives match your needs. An administrator will review your request.
-            </p>
-            <textarea
-              value={noMatchFeedback}
-              onChange={(e) => setNoMatchFeedback(e.target.value)}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Describe what's missing or different about your needs..."
+              <AutoAwesomeIcon />
+            </Avatar>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h4" fontWeight={800} gutterBottom>
+                Business Understanding
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Define your business problem, classify it into a PMI-CPMAI AI pattern, then match it to an existing initiative.
+              </Typography>
+            </Box>
+            <Chip
+              icon={<InfoOutlinedIcon />}
+              label="PMI-CPMAI guided workflow"
+              color="primary"
+              variant="outlined"
+              sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}
             />
-            <div className="mt-4 flex space-x-3">
-              <button
-                onClick={handleSubmitNoMatchFeedback}
-                disabled={!noMatchFeedback.trim()}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+          </Stack>
+
+          <Box sx={{ mt: 3 }}>
+            <Stepper activeStep={stepIndex} alternativeLabel>
+              {steps.map((label) => (
+                <Step key={label}>
+                  <StepLabel>{label}</StepLabel>
+                </Step>
+              ))}
+            </Stepper>
+          </Box>
+
+          {loading && <LinearProgress sx={{ mt: 2 }} />}
+        </Paper>
+
+        {/* Error */}
+        {error && <Alert severity="error">{error}</Alert>}
+
+        {/* Step 1 */}
+        {currentStep === WORKFLOW_STEPS.DEFINE_PROBLEM && (
+          <Paper elevation={0} sx={(t) => ({ p: { xs: 2.5, sm: 3 }, borderRadius: 3, border: `1px solid ${t.palette.divider}` })}>
+            <Stack spacing={2}>
+              <Typography variant="h5" fontWeight={800}>
+                Step 1 — Describe the business problem
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Be specific about the challenge, who it impacts, the desired outcome, and any constraints.
+              </Typography>
+
+              <TextField
+                value={businessProblem}
+                onChange={(e) => setBusinessProblem(e.target.value)}
+                multiline
+                minRows={6}
+                placeholder="Example: We need to reduce customer churn by predicting which customers are likely to leave and proactively engaging them with personalized offers..."
+                fullWidth
+              />
+
+              <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={1.5}>
+                <Typography variant="caption" color={isProblemValid ? 'success.main' : 'text.secondary'}>
+                  {businessProblem.trim().length} / {minChars} characters minimum
+                </Typography>
+                <Button
+                  onClick={handleAnalyzeProblem}
+                  variant="contained"
+                  size="large"
+                  startIcon={<AutoAwesomeIcon />}
+                  disabled={loading || !isProblemValid}
+                >
+                  {loading ? 'Analyzing…' : 'Analyze & classify'}
+                </Button>
+              </Stack>
+
+              <Divider />
+
+              <Typography variant="subtitle2" color="text.secondary">
+                Tip: Include the current baseline (e.g., 15% churn), target improvement, timeline, and what actions will be taken based on the model.
+              </Typography>
+            </Stack>
+          </Paper>
+        )}
+
+        {/* Step 2 */}
+        {currentStep === WORKFLOW_STEPS.CLASSIFY_PATTERN && classifiedPattern && (
+          <Grid container spacing={2.5}>
+            <Grid item xs={12} md={5}>
+              <Paper
+                elevation={0}
+                sx={(t) => ({
+                  p: { xs: 2.5, sm: 3 },
+                  borderRadius: 3,
+                  border: `1px solid ${t.palette.divider}`,
+                  bgcolor: 'rgba(124, 58, 237, 0.06)',
+                })}
               >
-                Submit Feedback
-              </button>
-              <button
-                onClick={() => setShowNoMatchModal(false)}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                <Stack spacing={2}>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                      <AutoAwesomeIcon />
+                    </Avatar>
+                    <Box>
+                      <Typography variant="h6" fontWeight={800}>
+                        AI Pattern Classification
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Review the model’s suggestion and adjust if needed.
+                      </Typography>
+                    </Box>
+                  </Stack>
+
+                  <Divider />
+
+                  <Stack spacing={1}>
+                    <Typography variant="overline" color="text.secondary">
+                      Suggested pattern
+                    </Typography>
+                    <Typography variant="h5" fontWeight={900}>
+                      {classifiedPattern.primary_pattern}
+                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Chip
+                        label={`${Math.round(classifiedPattern.confidence * 100)}% confidence`}
+                        color={classifiedPattern.confidence >= 0.75 ? 'success' : classifiedPattern.confidence >= 0.5 ? 'warning' : 'default'}
+                        variant="outlined"
+                      />
+                      {selectedPattern !== classifiedPattern.primary_pattern && (
+                        <Chip label="Overridden" color="warning" size="small" />
+                      )}
+                    </Stack>
+                  </Stack>
+
+                  <Box>
+                    <Typography variant="subtitle2" fontWeight={800} gutterBottom>
+                      Reasoning
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {classifiedPattern.reasoning}
+                    </Typography>
+                  </Box>
+
+                  {classifiedPattern.key_indicators?.length > 0 && (
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight={800} gutterBottom>
+                        Key indicators
+                      </Typography>
+                      <Stack spacing={0.75}>
+                        {classifiedPattern.key_indicators.map((indicator, idx) => (
+                          <Typography key={idx} variant="body2" color="text.secondary">
+                            • {indicator}
+                          </Typography>
+                        ))}
+                      </Stack>
+                    </Box>
+                  )}
+                </Stack>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} md={7}>
+              <Paper elevation={0} sx={(t) => ({ p: { xs: 2.5, sm: 3 }, borderRadius: 3, border: `1px solid ${t.palette.divider}` })}>
+                <Stack spacing={2}>
+                  <Typography variant="h5" fontWeight={800}>
+                    Step 2 — Confirm or change the AI pattern
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Choose the AI pattern that best matches the problem statement. You can also search initiatives using just the pattern.
+                  </Typography>
+
+                  <TextField
+                    select
+                    label="AI Pattern"
+                    value={selectedPattern || ''}
+                    onChange={(e) => setSelectedPattern(e.target.value)}
+                    SelectProps={{ native: true }}
+                    fullWidth
+                  >
+                    <option value="">Select a pattern…</option>
+                    {PMI_PATTERNS.map((pattern) => (
+                      <option key={pattern.name} value={pattern.name}>
+                        {pattern.icon} {pattern.name}
+                      </option>
+                    ))}
+                  </TextField>
+
+                  {patternMeta && (
+                    <Card variant="outlined" sx={{ borderRadius: 3 }}>
+                      <CardContent>
+                        <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                          <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
+                            <Typography component="span" fontSize={18}>
+                              {patternMeta.icon}
+                            </Typography>
+                          </Avatar>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="subtitle1" fontWeight={900}>
+                              {patternMeta.name}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                              {patternMeta.description}
+                            </Typography>
+                            <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                              Examples
+                            </Typography>
+                            <Stack direction="row" flexWrap="wrap" gap={1}>
+                              {patternMeta.examples.map((ex) => (
+                                <Chip key={ex} label={ex} size="small" variant="outlined" />
+                              ))}
+                            </Stack>
+                          </Box>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                    <Button
+                      onClick={handleSearchByPattern}
+                      variant="outlined"
+                      size="large"
+                      startIcon={<SearchIcon />}
+                      disabled={loading || !selectedPattern}
+                      fullWidth
+                    >
+                      Search by pattern
+                    </Button>
+                    <Button
+                      onClick={handleConfirmPattern}
+                      variant="contained"
+                      size="large"
+                      startIcon={<SearchIcon />}
+                      disabled={loading || !selectedPattern}
+                      fullWidth
+                    >
+                      Find similar initiatives
+                    </Button>
+                  </Stack>
+                </Stack>
+              </Paper>
+            </Grid>
+          </Grid>
+        )}
+
+        {/* Step 3 */}
+        {currentStep >= WORKFLOW_STEPS.FIND_INITIATIVES && (
+          <Stack spacing={2.5}>
+            {aiRecommendation?.recommended_initiative_id && (
+              <Paper
+                elevation={0}
+                sx={(t) => ({
+                  p: { xs: 2.5, sm: 3 },
+                  borderRadius: 3,
+                  border: `1px solid ${t.palette.divider}`,
+                  bgcolor: 'rgba(34, 197, 94, 0.08)',
+                })}
               >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+                <Stack spacing={1.5}>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Avatar sx={{ bgcolor: 'success.main' }}>
+                      <CheckCircleIcon />
+                    </Avatar>
+                    <Box>
+                      <Typography variant="h6" fontWeight={900}>
+                        AI Recommendation
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Best match based on your problem statement + similar initiatives.
+                      </Typography>
+                    </Box>
+                  </Stack>
+
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                    <Chip
+                      label={`Initiative #${aiRecommendation.recommended_initiative_id}`}
+                      color="success"
+                      variant="outlined"
+                    />
+                    <Chip
+                      label={`${Math.round(aiRecommendation.confidence * 100)}% confidence`}
+                      color={aiRecommendation.confidence >= 0.75 ? 'success' : aiRecommendation.confidence >= 0.5 ? 'warning' : 'default'}
+                      variant="outlined"
+                    />
+                  </Stack>
+
+                  <Typography variant="body2" color="text.secondary">
+                    {aiRecommendation.reasoning}
+                  </Typography>
+                </Stack>
+              </Paper>
+            )}
+
+            <Paper elevation={0} sx={(t) => ({ p: { xs: 2.5, sm: 3 }, borderRadius: 3, border: `1px solid ${t.palette.divider}` })}>
+              <Stack spacing={2}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={1.5}>
+                  <Box>
+                    <Typography variant="h5" fontWeight={900}>
+                      Step 3 — Select an initiative
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {similarInitiatives.length} match{similarInitiatives.length === 1 ? '' : 'es'} found
+                    </Typography>
+                  </Box>
+                  <Button variant="text" onClick={() => setShowNoMatchModal(true)} sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}>
+                    None of these match?
+                  </Button>
+                </Stack>
+
+                {similarInitiatives.length === 0 ? (
+                  <Alert severity="info">No similar initiatives were found. You can provide feedback so an administrator can review your request.</Alert>
+                ) : (
+                  <Grid container spacing={2}>
+                    {similarInitiatives.map((initiative) => {
+                      const isSelected = selectedInitiative === initiative.initiative_id
+                      const isRecommended = aiRecommendation?.recommended_initiative_id === initiative.initiative_id
+
+                      return (
+                        <Grid item xs={12} md={6} key={initiative.initiative_id}>
+                          <Card
+                            variant="outlined"
+                            sx={(t) => ({
+                              borderRadius: 3,
+                              borderColor: isSelected ? t.palette.primary.main : t.palette.divider,
+                              boxShadow: isSelected ? `0 0 0 2px ${t.palette.primary.main}22` : 'none',
+                              position: 'relative',
+                              overflow: 'hidden',
+                            })}
+                          >
+                            {isRecommended && (
+                              <Chip
+                                label="AI recommended"
+                                color="success"
+                                size="small"
+                                variant="filled"
+                                sx={{ position: 'absolute', top: 12, right: 12 }}
+                              />
+                            )}
+
+                            <CardActionArea onClick={() => setSelectedInitiative(initiative.initiative_id)}>
+                              <CardContent>
+                                <Stack spacing={1.25}>
+                                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
+                                    <Box sx={{ minWidth: 0 }}>
+                                      <Typography variant="subtitle1" fontWeight={900} noWrap>
+                                        {initiative.title}
+                                      </Typography>
+                                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                                        {initiative.description}
+                                      </Typography>
+                                    </Box>
+
+                                    <Stack alignItems="flex-end" spacing={0.5}>
+                                      <Typography variant="h5" fontWeight={900} color="primary.main">
+                                        {initiative.similarity_percentage}%
+                                      </Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        match
+                                      </Typography>
+                                    </Stack>
+                                  </Stack>
+
+                                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                    <Chip size="small" label={`Status: ${initiative.status}`} variant="outlined" />
+                                    {initiative.ai_pattern && (
+                                      <Chip size="small" label={`Pattern: ${initiative.ai_pattern}`} variant="outlined" />
+                                    )}
+                                  </Stack>
+
+                                  {initiative.business_objective && (
+                                    <Typography variant="body2" color="text.secondary">
+                                      <strong>Objective:</strong> {initiative.business_objective}
+                                    </Typography>
+                                  )}
+
+                                  {isSelected && (
+                                    <Stack direction="row" alignItems="center" spacing={1} sx={{ pt: 0.5 }}>
+                                      <CheckCircleIcon fontSize="small" color="primary" />
+                                      <Typography variant="body2" color="primary.main" fontWeight={700}>
+                                        Selected
+                                      </Typography>
+                                    </Stack>
+                                  )}
+                                </Stack>
+                              </CardContent>
+                            </CardActionArea>
+                          </Card>
+                        </Grid>
+                      )
+                    })}
+                  </Grid>
+                )}
+
+                <Divider />
+
+                <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" spacing={1.5}>
+                  <Button variant="outlined" startIcon={<LinkIcon />} onClick={() => setShowNoMatchModal(true)}>
+                    Provide feedback
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    startIcon={<LinkIcon />}
+                    onClick={() => handleSelectInitiative(selectedInitiative)}
+                    disabled={loading || !selectedInitiative}
+                  >
+                    {loading ? 'Linking…' : 'Confirm selection & continue'}
+                  </Button>
+                </Stack>
+              </Stack>
+            </Paper>
+          </Stack>
+        )}
+
+        {/* Feedback dialog */}
+        <Dialog open={showNoMatchModal} onClose={() => setShowNoMatchModal(false)} fullWidth maxWidth="sm">
+          <DialogTitle>No good match found?</DialogTitle>
+          <DialogContent>
+            <Stack spacing={1.5} sx={{ mt: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Tell us what’s missing. An administrator will review your request and may create a new initiative.
+              </Typography>
+              <TextField
+                value={noMatchFeedback}
+                onChange={(e) => setNoMatchFeedback(e.target.value)}
+                multiline
+                minRows={4}
+                placeholder="Describe what’s missing or different about your needs…"
+                fullWidth
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowNoMatchModal(false)}>Cancel</Button>
+            <Button onClick={handleSubmitNoMatchFeedback} variant="contained" disabled={!noMatchFeedback.trim()}>
+              Submit feedback
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Stack>
+    </Container>
   )
 }
 
