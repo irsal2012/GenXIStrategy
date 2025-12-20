@@ -85,7 +85,7 @@ const BusinessUnderstandingNew = () => {
 
     try {
       // Step 2: Classify AI Pattern
-      const patternResponse = await axios.post('/api/ai-projects/pmi-cpmai/classify-pattern', null, {
+      const patternResponse = await axios.post('/ai-projects/pmi-cpmai/classify-pattern', null, {
         params: { business_problem: businessProblem }
       })
 
@@ -108,7 +108,7 @@ const BusinessUnderstandingNew = () => {
     setError(null)
 
     try {
-      const searchResponse = await axios.post('/api/ai-projects/pmi-cpmai/find-similar-initiatives', null, {
+      const searchResponse = await axios.post('/ai-projects/pmi-cpmai/find-similar-initiatives', null, {
         params: {
           business_problem: businessProblem,
           ai_pattern: selectedPattern,
@@ -123,7 +123,7 @@ const BusinessUnderstandingNew = () => {
 
         if (initiatives.length > 0) {
           // Get AI recommendation
-          const recommendResponse = await axios.post('/api/ai-projects/pmi-cpmai/recommend-initiative', {
+          const recommendResponse = await axios.post('/ai-projects/pmi-cpmai/recommend-initiative', {
             business_problem: businessProblem,
             ai_pattern: selectedPattern,
             similar_initiatives: initiatives
@@ -149,7 +149,7 @@ const BusinessUnderstandingNew = () => {
     setError(null)
 
     try {
-      await axios.post('/api/ai-projects/pmi-cpmai/link-business-understanding', null, {
+      await axios.post('/ai-projects/pmi-cpmai/link-business-understanding', null, {
         params: {
           initiative_id: initiativeId,
           business_problem_text: businessProblem,
@@ -175,7 +175,7 @@ const BusinessUnderstandingNew = () => {
   // Submit no-match feedback
   const handleSubmitNoMatchFeedback = async () => {
     try {
-      await axios.post('/api/ai-projects/pmi-cpmai/submit-no-match-feedback', null, {
+      await axios.post('/ai-projects/pmi-cpmai/submit-no-match-feedback', null, {
         params: {
           business_problem_text: businessProblem,
           ai_pattern: selectedPattern,
@@ -304,34 +304,46 @@ const BusinessUnderstandingNew = () => {
               Review the AI's suggestion and select the pattern that best fits your business problem.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {PMI_PATTERNS.map((pattern) => (
-                <div
-                  key={pattern.name}
-                  onClick={() => setSelectedPattern(pattern.name)}
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                    selectedPattern === pattern.name
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-300 hover:border-blue-400'
-                  }`}
-                >
-                  <div className="flex items-start space-x-3">
-                    <div className="text-3xl">{pattern.icon}</div>
-                    <div className="flex-1">
-                      <h3 className="font-bold text-gray-900">{pattern.name}</h3>
-                      <p className="text-sm text-gray-600 mt-1">{pattern.description}</p>
-                      <div className="mt-2">
-                        <div className="text-xs text-gray-500 font-semibold">Examples:</div>
-                        <ul className="text-xs text-gray-600 list-disc list-inside">
-                          {pattern.examples.slice(0, 2).map((ex, idx) => (
+            {/* Dropdown Pattern Selector */}
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Select AI Pattern
+              </label>
+              <select
+                value={selectedPattern || ''}
+                onChange={(e) => setSelectedPattern(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+              >
+                <option value="">-- Select a Pattern --</option>
+                {PMI_PATTERNS.map((pattern) => (
+                  <option key={pattern.name} value={pattern.name}>
+                    {pattern.icon} {pattern.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Show selected pattern details */}
+              {selectedPattern && (
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  {PMI_PATTERNS.filter(p => p.name === selectedPattern).map((pattern) => (
+                    <div key={pattern.name}>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <span className="text-2xl">{pattern.icon}</span>
+                        <h3 className="font-bold text-lg text-gray-900">{pattern.name}</h3>
+                      </div>
+                      <p className="text-sm text-gray-700 mb-3">{pattern.description}</p>
+                      <div>
+                        <div className="text-xs text-gray-600 font-semibold mb-1">Examples:</div>
+                        <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
+                          {pattern.examples.map((ex, idx) => (
                             <li key={idx}>{ex}</li>
                           ))}
                         </ul>
                       </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
 
             <button

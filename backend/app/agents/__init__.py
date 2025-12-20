@@ -32,6 +32,7 @@ from .portfolio_analyst_agent import PortfolioAnalystAgent
 from .roadmap_agent import RoadmapAgent
 from .governance_agent import GovernanceAgent
 from .executive_agent import ExecutiveAgent
+from .ai_project_manager_agent import AIProjectManagerAgent
 
 __all__ = [
     "BaseAgent",
@@ -40,4 +41,5 @@ __all__ = [
     "RoadmapAgent",
     "GovernanceAgent",
     "ExecutiveAgent",
+    "AIProjectManagerAgent",
 ]

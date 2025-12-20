@@ -73,18 +73,25 @@ Analyze this problem and respond in JSON format:
 """
         
         try:
-            response = await self._call_openai(
+            # Call OpenAI with proper parameters
+            response = self.client.chat.completions.create(
+                model=self.model,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.2  # Low temperature for consistent classification
+                temperature=0.2,  # Low temperature for consistent classification
+                response_format={"type": "json_object"}
             )
             
-            result = self._parse_json_response(response)
-            self._log_agent_call("classify_ai_pattern", {"business_problem": business_problem[:100]}, result)
+            # Extract and parse JSON response
+            content = response.choices[0].message.content
+            import json
+            result = json.loads(content)
             
-            return self._format_success_response(
-                data=result,
-                message="AI pattern classification completed"
-            )
+            return {
+                "success": True,
+                "data": result,
+                "agent": self.agent_name,
+                "message": "AI pattern classification completed"
+            }
         except Exception as e:
             return self._handle_error(e)
 
@@ -163,21 +170,25 @@ Respond in JSON format:
 """
         
         try:
-            response = await self._call_openai(
+            # Call OpenAI with proper parameters
+            response = self.client.chat.completions.create(
+                model=self.model,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.3
+                temperature=0.3,
+                response_format={"type": "json_object"}
             )
             
-            result = self._parse_json_response(response)
-            self._log_agent_call("recommend_best_initiative", {
-                "business_problem": business_problem[:100],
-                "similar_count": len(similar_initiatives)
-            }, result)
+            # Extract and parse JSON response
+            content = response.choices[0].message.content
+            import json
+            result = json.loads(content)
             
-            return self._format_success_response(
-                data=result,
-                message="Initiative recommendation completed"
-            )
+            return {
+                "success": True,
+                "data": result,
+                "agent": self.agent_name,
+                "message": "Initiative recommendation completed"
+            }
         except Exception as e:
             return self._handle_error(e)
 

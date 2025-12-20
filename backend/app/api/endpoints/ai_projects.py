@@ -55,7 +55,13 @@ async def classify_ai_pattern(
     Step 2 of PMI-CPMAI workflow.
     """
     try:
-        agent = AIProjectManagerAgent()
+        from app.services.openai_service import openai_service
+        # Use the openai_service which has the client and model configured
+        from openai import OpenAI
+        from app.core.config import settings
+        
+        client = OpenAI(api_key=settings.openai_api_key)
+        agent = AIProjectManagerAgent(client, settings.OPENAI_MODEL)
         result = await agent.classify_ai_pattern(business_problem)
         return result
     except Exception as e:
@@ -165,7 +171,11 @@ async def recommend_best_initiative(
     Step 4 of PMI-CPMAI workflow.
     """
     try:
-        agent = AIProjectManagerAgent()
+        from openai import OpenAI
+        from app.core.config import settings
+        
+        client = OpenAI(api_key=settings.openai_api_key)
+        agent = AIProjectManagerAgent(client, settings.OPENAI_MODEL)
         result = await agent.recommend_best_initiative(
             business_problem=business_problem,
             ai_pattern=ai_pattern,
