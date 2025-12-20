@@ -194,10 +194,7 @@ const BusinessUnderstandingNew = () => {
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="bg-white shadow rounded-lg p-6">
-        <h1 className="text-3xl font-bold text-gray-900">PMI-CPMAI Business Understanding Workflow</h1>
-        <p className="mt-2 text-gray-600">
-          Define your business problem and match it to an existing initiative
-        </p>
+        <h1 className="text-3xl font-bold text-gray-900">Define your business problem and match it to an existing initiative</h1>
         
         {/* Progress Steps */}
         <div className="mt-6 flex items-center justify-between">
