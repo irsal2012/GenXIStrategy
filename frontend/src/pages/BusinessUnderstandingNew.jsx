@@ -105,6 +105,11 @@ const BusinessUnderstandingNew = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
+  const selectedInitiativeDetails = useMemo(() => {
+    if (!selectedInitiative) return null
+    return similarInitiatives.find((i) => i.initiative_id === selectedInitiative) || null
+  }, [selectedInitiative, similarInitiatives])
+
   const minChars = 100
   const isProblemValid = businessProblem.trim().length >= minChars
 
@@ -693,19 +698,67 @@ const BusinessUnderstandingNew = () => {
 
                 <Divider />
 
-                <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" spacing={1.5}>
-                  <Button variant="outlined" startIcon={<LinkIcon />} onClick={() => setShowNoMatchModal(true)}>
-                    Provide feedback
-                  </Button>
-                  <Button
-                    variant="contained"
-                    color="success"
-                    startIcon={<LinkIcon />}
-                    onClick={() => handleSelectInitiative(selectedInitiative)}
-                    disabled={loading || !selectedInitiative}
-                  >
-                    {loading ? 'Linking…' : 'Confirm selection & continue'}
-                  </Button>
+                <Stack spacing={1.5}>
+                  {selectedInitiativeDetails && (
+                    <Paper
+                      variant="outlined"
+                      sx={(t) => ({
+                        p: 2,
+                        borderRadius: 2.5,
+                        borderColor: t.palette.success.main,
+                        bgcolor: 'rgba(34, 197, 94, 0.06)',
+                      })}
+                    >
+                      <Stack spacing={1}>
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="space-between" alignItems={{ sm: 'center' }}>
+                          <Typography variant="subtitle2" fontWeight={900}>
+                            Selected initiative
+                          </Typography>
+                          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                            <Chip size="small" label={`Status: ${selectedInitiativeDetails.status}`} variant="outlined" />
+                            <Chip
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                              label={`${selectedInitiativeDetails.similarity_percentage}% match`}
+                            />
+                          </Stack>
+                        </Stack>
+
+                        <Typography variant="subtitle1" fontWeight={900}>
+                          {selectedInitiativeDetails.title}
+                        </Typography>
+
+                        {selectedInitiativeDetails.business_objective && (
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>Objective:</strong> {selectedInitiativeDetails.business_objective}
+                          </Typography>
+                        )}
+
+                        <Typography variant="caption" color="text.secondary">
+                          ID: {selectedInitiativeDetails.initiative_id}
+                          {aiRecommendation?.recommended_initiative_id === selectedInitiativeDetails.initiative_id
+                            ? ' • AI recommended'
+                            : ''}
+                        </Typography>
+                      </Stack>
+                    </Paper>
+                  )}
+
+                  <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" spacing={1.5}>
+                    <Button variant="outlined" startIcon={<LinkIcon />} onClick={() => setShowNoMatchModal(true)}>
+                      Provide feedback
+                    </Button>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      startIcon={<LinkIcon />}
+                      onClick={() => handleSelectInitiative(selectedInitiative)}
+                      disabled={loading || !selectedInitiative}
+                    >
+                      {loading ? 'Linking…' : 'Confirm selection & continue'}
+                    </Button>
+                  </Stack>
                 </Stack>
               </Stack>
             </Paper>
