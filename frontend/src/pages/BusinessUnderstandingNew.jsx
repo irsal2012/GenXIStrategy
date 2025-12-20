@@ -534,17 +534,7 @@ const BusinessUnderstandingNew = () => {
                       disabled={loading || !selectedPattern}
                       fullWidth
                     >
-                      Search by pattern
-                    </Button>
-                    <Button
-                      onClick={handleConfirmPattern}
-                      variant="contained"
-                      size="large"
-                      startIcon={<SearchIcon />}
-                      disabled={loading || !selectedPattern}
-                      fullWidth
-                    >
-                      Find similar initiatives
+                      Search Initiatives by pattern
                     </Button>
                   </Stack>
                 </Stack>
