@@ -112,7 +112,6 @@ const BusinessUnderstandingNew = () => {
         params: {
           business_problem: businessProblem,
           ai_pattern: selectedPattern,
-          status_filter: ['ideation', 'planning'],
           top_k: 10
         }
       })
@@ -162,7 +161,6 @@ const BusinessUnderstandingNew = () => {
         params: {
           business_problem: searchQuery,
           ai_pattern: selectedPattern,
-          status_filter: ['ideation', 'planning'],
           top_k: 10
         }
       })

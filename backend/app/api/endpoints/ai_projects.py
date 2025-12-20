@@ -72,7 +72,7 @@ async def classify_ai_pattern(
 async def find_similar_initiatives(
     business_problem: str,
     ai_pattern: Optional[str] = None,
-    status_filter: Optional[List[str]] = Query(default=["ideation", "planning"]),
+    status_filter: Optional[List[str]] = Query(default=None),
     top_k: int = Query(default=10, le=20),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -82,7 +82,7 @@ async def find_similar_initiatives(
     Step 3 of PMI-CPMAI workflow.
     """
     try:
-        # Perform semantic search
+        # Perform semantic search (no status filter by default - search all initiatives)
         similar_initiatives = await semantic_search_service.find_similar_initiatives(
             query_text=business_problem,
             top_k=top_k,
@@ -93,9 +93,7 @@ async def find_similar_initiatives(
         # If too few results, try fallback keyword search
         if len(similar_initiatives) < 3:
             # Get all initiatives from database
-            all_initiatives = db.query(Initiative).filter(
-                Initiative.status.in_(status_filter) if status_filter else True
-            ).all()
+            all_initiatives = db.query(Initiative).all()
             
             initiatives_dict = [
                 {
