@@ -195,32 +195,6 @@ const BusinessUnderstandingNew = () => {
       {/* Header */}
       <div className="bg-white shadow rounded-lg p-6">
         <h1 className="text-3xl font-bold text-gray-900">Define your business problem and match it to an existing initiative</h1>
-        
-        {/* Progress Steps */}
-        <div className="mt-6 flex items-center justify-between">
-          {[
-            { step: 1, label: 'Define Problem' },
-            { step: 2, label: 'Classify Pattern' },
-            { step: 3, label: 'Find Initiatives' },
-            { step: 4, label: 'Select Initiative' }
-          ].map((item, idx) => (
-            <React.Fragment key={item.step}>
-              <div className="flex flex-col items-center">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                  currentStep >= item.step ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
-                }`}>
-                  {item.step}
-                </div>
-                <div className="mt-2 text-sm font-medium text-gray-700">{item.label}</div>
-              </div>
-              {idx < 3 && (
-                <div className={`flex-1 h-1 mx-4 ${
-                  currentStep > item.step ? 'bg-blue-600' : 'bg-gray-300'
-                }`} />
-              )}
-            </React.Fragment>
-          ))}
-        </div>
       </div>
 
       {/* Error Display */}
