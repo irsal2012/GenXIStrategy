@@ -79,16 +79,27 @@ async def find_similar_initiatives(
 ):
     """
     Find similar initiatives using semantic search.
+    If ai_pattern is provided, filters by pattern first, then ranks by similarity.
     Step 3 of PMI-CPMAI workflow.
     """
     try:
-        # Perform semantic search (no status filter by default - search all initiatives)
-        similar_initiatives = await semantic_search_service.find_similar_initiatives(
-            query_text=business_problem,
-            top_k=top_k,
-            status_filter=status_filter,
-            min_similarity=0.3
-        )
+        # NEW: If pattern is provided, use pattern-filtered search
+        if ai_pattern:
+            similar_initiatives = await semantic_search_service.find_similar_initiatives_by_pattern(
+                query_text=business_problem,
+                ai_pattern=ai_pattern,
+                top_k=top_k,
+                status_filter=status_filter,
+                min_similarity=0.3
+            )
+        else:
+            # Original behavior: search all initiatives
+            similar_initiatives = await semantic_search_service.find_similar_initiatives(
+                query_text=business_problem,
+                top_k=top_k,
+                status_filter=status_filter,
+                min_similarity=0.3
+            )
         
         # If too few results, try fallback keyword search
         if len(similar_initiatives) < 3:

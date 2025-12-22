@@ -212,10 +212,16 @@ const BusinessUnderstandingNew = () => {
     }
   }
 
-  // Search initiatives by pattern only (without business problem text)
+  // Search initiatives by pattern using user's business problem
   const handleSearchByPattern = async () => {
     if (!selectedPattern) {
       setError('Please select an AI pattern first.')
+      return
+    }
+
+    // Check if user has entered a business problem
+    if (!businessProblem || businessProblem.trim().length < minChars) {
+      setError(`Please describe your business problem first (minimum ${minChars} characters).`)
       return
     }
 
@@ -223,14 +229,11 @@ const BusinessUnderstandingNew = () => {
     setError(null)
 
     try {
-      // Create a generic search query based on the pattern
-      const patternInfo = PMI_PATTERNS.find(p => p.name === selectedPattern)
-      const searchQuery = patternInfo ? patternInfo.description : selectedPattern
-
+      // Use the user's business problem + selected pattern for hybrid search
       const searchResponse = await axios.post('/ai-projects/pmi-cpmai/find-similar-initiatives', null, {
         params: {
-          business_problem: searchQuery,
-          ai_pattern: selectedPattern,
+          business_problem: businessProblem,  // User's actual problem
+          ai_pattern: selectedPattern,         // Filter by pattern
           top_k: 10
         }
       })

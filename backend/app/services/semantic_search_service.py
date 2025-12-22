@@ -253,6 +253,76 @@ class SemanticSearchService:
             logger.error(f"Error finding similar initiatives: {e}")
             raise
     
+    async def find_similar_initiatives_by_pattern(
+        self,
+        query_text: str,
+        ai_pattern: str,
+        top_k: int = 10,
+        status_filter: Optional[List[str]] = None,
+        min_similarity: float = 0.3
+    ) -> List[Dict[str, Any]]:
+        """
+        Find similar initiatives filtered by AI pattern first, then ranked by similarity.
+        This provides a hybrid search: filter by pattern, then semantic ranking.
+        
+        Args:
+            query_text: User's business problem text to search for
+            ai_pattern: AI pattern to filter by (e.g., "Predictive Analytics & Decision Support")
+            top_k: Number of results to return
+            status_filter: List of statuses to filter by (e.g., ['ideation', 'planning'])
+            min_similarity: Minimum similarity score (0-1)
+            
+        Returns:
+            List of similar initiatives with the specified pattern, ranked by similarity
+        """
+        try:
+            # Generate query embedding from user's business problem
+            query_embedding = await self.generate_embedding(query_text)
+            
+            # Load embeddings
+            data = self._load_embeddings()
+            
+            if not data["embeddings"]:
+                logger.warning("No embeddings found in database")
+                return []
+            
+            # Calculate similarities ONLY for initiatives with matching pattern
+            results = []
+            for item in data["embeddings"]:
+                # FILTER: Only include initiatives with the selected AI pattern
+                if item.get("ai_pattern") != ai_pattern:
+                    continue
+                
+                # Apply status filter if provided
+                if status_filter and item.get("status") not in status_filter:
+                    continue
+                
+                # Calculate similarity to user's business problem
+                similarity = self._cosine_similarity(query_embedding, item["embedding"])
+                
+                # Only include if above minimum similarity
+                if similarity >= min_similarity:
+                    results.append({
+                        "initiative_id": item["initiative_id"],
+                        "title": item["title"],
+                        "description": item["description"],
+                        "business_objective": item.get("business_objective", ""),
+                        "ai_pattern": item.get("ai_pattern", ""),
+                        "status": item.get("status", ""),
+                        "similarity_score": round(similarity, 4),
+                        "similarity_percentage": round(similarity * 100, 2)
+                    })
+            
+            # Sort by similarity (highest first)
+            results.sort(key=lambda x: x["similarity_score"], reverse=True)
+            
+            # Return top K results
+            logger.info(f"Found {len(results)} initiatives with pattern '{ai_pattern}', returning top {min(top_k, len(results))}")
+            return results[:top_k]
+        except Exception as e:
+            logger.error(f"Error finding similar initiatives by pattern: {e}")
+            raise
+    
     def fallback_keyword_search(
         self,
         query_text: str,
