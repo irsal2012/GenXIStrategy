@@ -95,6 +95,9 @@ class BusinessUnderstanding(Base):
     ai_recommendation_reasoning = Column(Text, nullable=True)  # Why AI recommended this initiative
     user_feedback_no_match = Column(Text, nullable=True)  # User feedback if no good match
     
+    # PMI-CPMAI: Tactical Use Case Selection
+    selected_use_case = Column(JSON, nullable=True)  # Selected tactical use case: {title, description, expected_outcomes, timeline, success_criteria}
+    
     # Business objectives
     business_objectives = Column(Text, nullable=True)
     success_criteria = Column(JSON, nullable=True)  # List of success criteria

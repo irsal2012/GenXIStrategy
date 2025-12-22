@@ -95,6 +95,103 @@ Analyze this problem and respond in JSON format:
         except Exception as e:
             return self._handle_error(e)
 
+    async def generate_tactical_use_cases(
+        self,
+        business_problem: str,
+        ai_pattern: str,
+        initiative_details: Dict[str, Any],
+        pattern_examples: List[str]
+    ) -> Dict[str, Any]:
+        """
+        Generate 3-5 tactical use cases for a specific business problem within an initiative.
+        
+        Args:
+            business_problem: User's specific business problem
+            ai_pattern: Selected AI pattern
+            initiative_details: Details of the selected initiative
+            pattern_examples: Example use cases for the AI pattern
+            
+        Returns:
+            Dict with 3-5 tactical use cases
+        """
+        prompt = f"""
+You are an AI Project Strategist helping define tactical use cases for an AI initiative.
+
+CONTEXT:
+Business Problem: {business_problem}
+
+AI Pattern: {ai_pattern}
+Pattern Examples: {', '.join(pattern_examples)}
+
+Strategic Initiative: {initiative_details.get('title', 'N/A')}
+Initiative Description: {initiative_details.get('description', 'N/A')}
+Initiative Objective: {initiative_details.get('business_objective', 'N/A')}
+
+TASK:
+Generate 3-5 tactical use cases that are:
+1. Specific implementations within the strategic initiative
+2. Directly address the user's business problem
+3. Scoped for 3-6 month implementation
+4. Measurable with clear success criteria
+5. Aligned with the AI pattern capabilities
+
+Each tactical use case should be a concrete, implementable project that:
+- Has a clear title and description
+- Defines expected outcomes
+- Specifies timeline and complexity
+- Includes measurable success criteria
+- Shows high alignment with the business problem
+
+Respond in JSON format:
+{{
+    "use_cases": [
+        {{
+            "title": "Short, descriptive title (max 60 chars)",
+            "description": "What this use case accomplishes and how it addresses the business problem (2-3 sentences)",
+            "expected_outcomes": [
+                "Specific, measurable outcome 1",
+                "Specific, measurable outcome 2",
+                "Specific, measurable outcome 3"
+            ],
+            "timeline": "3-6 months",
+            "success_criteria": [
+                "Measurable criterion 1 (e.g., 'Achieve 85% accuracy')",
+                "Measurable criterion 2 (e.g., 'Reduce churn by 15%')"
+            ],
+            "alignment_score": <75-95>,
+            "implementation_complexity": "low|medium|high",
+            "key_technologies": ["technology1", "technology2"],
+            "estimated_roi": "Brief ROI description"
+        }}
+    ]
+}}
+
+Generate 3-5 use cases, ordered by alignment score (highest first).
+"""
+        
+        try:
+            # Call OpenAI with proper parameters
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.4,  # Moderate temperature for creative but focused suggestions
+                response_format={"type": "json_object"}
+            )
+            
+            # Extract and parse JSON response
+            content = response.choices[0].message.content
+            import json
+            result = json.loads(content)
+            
+            return {
+                "success": True,
+                "data": result,
+                "agent": self.agent_name,
+                "message": "Tactical use cases generated successfully"
+            }
+        except Exception as e:
+            return self._handle_error(e)
+
     async def recommend_best_initiative(
         self,
         business_problem: str,

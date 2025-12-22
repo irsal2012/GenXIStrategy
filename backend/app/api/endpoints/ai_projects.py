@@ -206,6 +206,7 @@ async def link_business_understanding_to_initiative(
     similar_initiatives_found: Optional[List[dict]] = None,
     ai_recommended_initiative_id: Optional[int] = None,
     ai_recommendation_reasoning: Optional[str] = None,
+    selected_use_case: Optional[dict] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -227,6 +228,7 @@ async def link_business_understanding_to_initiative(
             existing.similar_initiatives_found = similar_initiatives_found
             existing.ai_recommended_initiative_id = ai_recommended_initiative_id
             existing.ai_recommendation_reasoning = ai_recommendation_reasoning
+            existing.selected_use_case = selected_use_case
             existing.updated_at = datetime.utcnow()
             db.commit()
             db.refresh(existing)
@@ -243,9 +245,92 @@ async def link_business_understanding_to_initiative(
                 pattern_override=pattern_override,
                 similar_initiatives_found=similar_initiatives_found,
                 ai_recommended_initiative_id=ai_recommended_initiative_id,
-                ai_recommendation_reasoning=ai_recommendation_reasoning
+                ai_recommendation_reasoning=ai_recommendation_reasoning,
+                selected_use_case=selected_use_case
             )
             return AIProjectService.create_business_understanding(db, business_understanding_data, current_user.id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/pmi-cpmai/generate-tactical-use-cases", response_model=dict)
+async def generate_tactical_use_cases(
+    business_problem: str,
+    ai_pattern: str,
+    initiative_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Generate tactical use cases based on business problem, AI pattern, and initiative.
+    Step 3.5 of PMI-CPMAI workflow.
+    """
+    try:
+        # Get initiative details
+        initiative = db.query(Initiative).filter(Initiative.id == initiative_id).first()
+        if not initiative:
+            raise HTTPException(status_code=404, detail="Initiative not found")
+        
+        # Define PMI_PATTERNS locally (same as frontend)
+        PMI_PATTERNS = [
+            {
+                "name": "Hyperpersonalization",
+                "examples": ["Personalized product recommendations", "Customized content feeds", "Individual treatment plans"]
+            },
+            {
+                "name": "Conversational & Human Interaction",
+                "examples": ["Customer service chatbots", "Virtual assistants", "Language translation", "Content generation"]
+            },
+            {
+                "name": "Recognition",
+                "examples": ["Image recognition", "Speech-to-text", "OCR", "Facial recognition"]
+            },
+            {
+                "name": "Pattern & Anomaly Detection",
+                "examples": ["Fraud detection", "Quality control", "Network intrusion detection", "Equipment failure prediction"]
+            },
+            {
+                "name": "Predictive Analytics & Decision Support",
+                "examples": ["Sales forecasting", "Churn prediction", "Demand planning", "Risk assessment"]
+            },
+            {
+                "name": "Goal-Driven Systems",
+                "examples": ["Game AI", "Resource optimization", "Dynamic pricing", "Route optimization"]
+            },
+            {
+                "name": "Autonomous Systems",
+                "examples": ["Self-driving vehicles", "Autonomous drones", "Robotic process automation", "Smart manufacturing"]
+            }
+        ]
+        
+        pattern_meta = next((p for p in PMI_PATTERNS if p["name"] == ai_pattern), None)
+        pattern_examples = pattern_meta["examples"] if pattern_meta else []
+        
+        # Prepare initiative details
+        initiative_details = {
+            "title": initiative.title,
+            "description": initiative.description,
+            "business_objective": initiative.business_objective,
+            "status": initiative.status.value if initiative.status else None
+        }
+        
+        # Generate use cases using AI
+        from openai import OpenAI
+        from app.core.config import settings
+        
+        client = OpenAI(api_key=settings.openai_api_key)
+        agent = AIProjectManagerAgent(client, settings.OPENAI_MODEL)
+        
+        result = await agent.generate_tactical_use_cases(
+            business_problem=business_problem,
+            ai_pattern=ai_pattern,
+            initiative_details=initiative_details,
+            pattern_examples=pattern_examples
+        )
+        
+        return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -101,6 +101,13 @@ const BusinessUnderstandingNew = () => {
   const [showNoMatchModal, setShowNoMatchModal] = useState(false)
   const [noMatchFeedback, setNoMatchFeedback] = useState('')
 
+  // Use case selection state
+  const [showUseCaseModal, setShowUseCaseModal] = useState(false)
+  const [generatedUseCases, setGeneratedUseCases] = useState([])
+  const [selectedUseCase, setSelectedUseCase] = useState(null)
+  const [loadingUseCases, setLoadingUseCases] = useState(false)
+  const [useCaseError, setUseCaseError] = useState(null)
+
   // Loading states
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -110,7 +117,7 @@ const BusinessUnderstandingNew = () => {
     return similarInitiatives.find((i) => i.initiative_id === selectedInitiative) || null
   }, [selectedInitiative, similarInitiatives])
 
-  const minChars = 100
+  const minChars = 30
   const isProblemValid = businessProblem.trim().length >= minChars
 
   const steps = useMemo(
@@ -145,8 +152,8 @@ const BusinessUnderstandingNew = () => {
 
   // Step 1: Define Business Problem
   const handleAnalyzeProblem = async () => {
-    if (businessProblem.length < 100) {
-      setError('Please provide at least 100 characters to describe your business problem.')
+    if (businessProblem.trim().length < minChars) {
+      setError(`Please provide at least ${minChars} characters to describe your business problem.`)
       return
     }
 
@@ -251,15 +258,47 @@ const BusinessUnderstandingNew = () => {
     }
   }
 
-  // Step 4: Link to Initiative
-  const handleSelectInitiative = async (initiativeId) => {
+  // NEW: Generate tactical use cases when user confirms selection
+  const handleConfirmSelection = async () => {
+    if (!selectedInitiative) {
+      setError('Please select an initiative first.')
+      return
+    }
+
+    setLoadingUseCases(true)
+    setUseCaseError(null)
+
+    try {
+      // Generate tactical use cases
+      const response = await axios.post('/ai-projects/pmi-cpmai/generate-tactical-use-cases', null, {
+        params: {
+          business_problem: businessProblem,
+          ai_pattern: selectedPattern,
+          initiative_id: selectedInitiative
+        }
+      })
+
+      if (response.data.success) {
+        setGeneratedUseCases(response.data.data.use_cases)
+        setShowUseCaseModal(true)
+      }
+    } catch (err) {
+      setUseCaseError(err.response?.data?.detail || 'Error generating use cases')
+      setError(err.response?.data?.detail || 'Error generating use cases')
+    } finally {
+      setLoadingUseCases(false)
+    }
+  }
+
+  // NEW: Finalize selection with optional use case
+  const handleFinalizeSelection = async () => {
     setLoading(true)
     setError(null)
 
     try {
       await axios.post('/ai-projects/pmi-cpmai/link-business-understanding', null, {
         params: {
-          initiative_id: initiativeId,
+          initiative_id: selectedInitiative,
           business_problem_text: businessProblem,
           ai_pattern: selectedPattern,
           ai_pattern_confidence: classifiedPattern.confidence,
@@ -267,12 +306,13 @@ const BusinessUnderstandingNew = () => {
           pattern_override: selectedPattern !== classifiedPattern.primary_pattern,
           similar_initiatives_found: similarInitiatives.map(i => ({ id: i.initiative_id, score: i.similarity_score })),
           ai_recommended_initiative_id: aiRecommendation?.recommended_initiative_id,
-          ai_recommendation_reasoning: aiRecommendation?.reasoning
+          ai_recommendation_reasoning: aiRecommendation?.reasoning,
+          selected_use_case: selectedUseCase
         }
       })
 
       // Navigate to the initiative's business understanding page
-      navigate(`/ai-projects/${initiativeId}/business-understanding`)
+      navigate(`/ai-projects/${selectedInitiative}/business-understanding`)
     } catch (err) {
       setError(err.response?.data?.detail || 'Error linking business understanding')
     } finally {
@@ -755,11 +795,11 @@ const BusinessUnderstandingNew = () => {
                     <Button
                       variant="contained"
                       color="success"
-                      startIcon={<LinkIcon />}
-                      onClick={() => handleSelectInitiative(selectedInitiative)}
-                      disabled={loading || !selectedInitiative}
+                      startIcon={<AutoAwesomeIcon />}
+                      onClick={handleConfirmSelection}
+                      disabled={loading || loadingUseCases || !selectedInitiative}
                     >
-                      {loading ? 'Linking…' : 'Confirm selection & continue'}
+                      {loadingUseCases ? 'Generating use cases…' : 'Confirm selection & continue'}
                     </Button>
                   </Stack>
                 </Stack>
@@ -767,6 +807,137 @@ const BusinessUnderstandingNew = () => {
             </Paper>
           </Stack>
         )}
+
+        {/* Use Case Selection Dialog */}
+        <Dialog open={showUseCaseModal} onClose={() => setShowUseCaseModal(false)} fullWidth maxWidth="md">
+          <DialogTitle>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Avatar sx={{ bgcolor: 'primary.main' }}>
+                <AutoAwesomeIcon />
+              </Avatar>
+              <Box>
+                <Typography variant="h6" fontWeight={800}>
+                  Select a Tactical Use Case
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Choose the specific implementation that best matches your needs
+                </Typography>
+              </Box>
+            </Stack>
+          </DialogTitle>
+          
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              {useCaseError && <Alert severity="error">{useCaseError}</Alert>}
+              
+              {generatedUseCases.map((useCase, index) => {
+                const isSelected = selectedUseCase?.title === useCase.title
+                
+                return (
+                  <Card
+                    key={index}
+                    variant="outlined"
+                    sx={{
+                      borderColor: isSelected ? 'primary.main' : 'divider',
+                      boxShadow: isSelected ? '0 0 0 2px rgba(99,102,241,0.2)' : 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onClick={() => setSelectedUseCase(useCase)}
+                  >
+                    <CardContent>
+                      <Stack spacing={1.5}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                          <Typography variant="h6" fontWeight={800}>
+                            {useCase.title}
+                          </Typography>
+                          <Chip 
+                            label={`${useCase.alignment_score}% match`}
+                            color={useCase.alignment_score >= 80 ? 'success' : 'primary'}
+                            size="small"
+                          />
+                        </Stack>
+                        
+                        <Typography variant="body2" color="text.secondary">
+                          {useCase.description}
+                        </Typography>
+                        
+                        <Box>
+                          <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                            Expected Outcomes
+                          </Typography>
+                          <Stack spacing={0.5}>
+                            {useCase.expected_outcomes.map((outcome, idx) => (
+                              <Typography key={idx} variant="body2" color="text.secondary">
+                                • {outcome}
+                              </Typography>
+                            ))}
+                          </Stack>
+                        </Box>
+                        
+                        {useCase.success_criteria && useCase.success_criteria.length > 0 && (
+                          <Box>
+                            <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                              Success Criteria
+                            </Typography>
+                            <Stack spacing={0.5}>
+                              {useCase.success_criteria.map((criterion, idx) => (
+                                <Typography key={idx} variant="body2" color="text.secondary">
+                                  • {criterion}
+                                </Typography>
+                              ))}
+                            </Stack>
+                          </Box>
+                        )}
+                        
+                        <Stack direction="row" spacing={1} flexWrap="wrap">
+                          <Chip size="small" label={`Timeline: ${useCase.timeline}`} variant="outlined" />
+                          <Chip size="small" label={`Complexity: ${useCase.implementation_complexity}`} variant="outlined" />
+                        </Stack>
+                        
+                        {isSelected && (
+                          <Stack direction="row" alignItems="center" spacing={1}>
+                            <CheckCircleIcon fontSize="small" color="primary" />
+                            <Typography variant="body2" color="primary.main" fontWeight={700}>
+                              Selected
+                            </Typography>
+                          </Stack>
+                        )}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </Stack>
+          </DialogContent>
+          
+          <DialogActions>
+            <Button onClick={() => setShowUseCaseModal(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                setSelectedUseCase(null)
+                setShowUseCaseModal(false)
+                handleFinalizeSelection()
+              }}
+              variant="outlined"
+            >
+              Skip this step
+            </Button>
+            <Button 
+              onClick={() => {
+                setShowUseCaseModal(false)
+                handleFinalizeSelection()
+              }}
+              variant="contained"
+              disabled={!selectedUseCase}
+              startIcon={<LinkIcon />}
+            >
+              Confirm & Continue
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Feedback dialog */}
         <Dialog open={showNoMatchModal} onClose={() => setShowNoMatchModal(false)} fullWidth maxWidth="sm">

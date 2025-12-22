@@ -73,10 +73,20 @@ class BusinessUnderstandingBase(BaseModel):
     feasibility_notes: Optional[str] = None
     go_no_go_decision: GoNoGoDecisionEnum = GoNoGoDecisionEnum.PENDING
     go_no_go_rationale: Optional[str] = None
+    selected_use_case: Optional[Dict[str, Any]] = None
 
 
 class BusinessUnderstandingCreate(BusinessUnderstandingBase):
     initiative_id: int
+    business_problem_text: Optional[str] = None
+    ai_pattern: Optional[str] = None
+    ai_pattern_confidence: Optional[float] = None
+    ai_pattern_reasoning: Optional[str] = None
+    pattern_override: Optional[bool] = False
+    similar_initiatives_found: Optional[List[Dict[str, Any]]] = None
+    ai_recommended_initiative_id: Optional[int] = None
+    ai_recommendation_reasoning: Optional[str] = None
+    selected_use_case: Optional[Dict[str, Any]] = None
 
 
 class BusinessUnderstandingUpdate(BaseModel):
@@ -95,6 +105,15 @@ class BusinessUnderstandingUpdate(BaseModel):
 class BusinessUnderstanding(BusinessUnderstandingBase):
     id: int
     initiative_id: int
+    business_problem_text: Optional[str] = None
+    ai_pattern: Optional[str] = None
+    ai_pattern_confidence: Optional[float] = None
+    ai_pattern_reasoning: Optional[str] = None
+    pattern_override: Optional[bool] = False
+    similar_initiatives_found: Optional[List[Dict[str, Any]]] = None
+    ai_recommended_initiative_id: Optional[int] = None
+    ai_recommendation_reasoning: Optional[str] = None
+    selected_use_case: Optional[Dict[str, Any]] = None
     decision_date: Optional[datetime] = None
     decision_by: Optional[int] = None
     ai_feasibility_analysis: Optional[Dict[str, Any]] = None
