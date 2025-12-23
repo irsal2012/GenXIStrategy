@@ -303,6 +303,7 @@ const BusinessUnderstandingNew = () => {
     setUseCaseError(null)
     setGeneratedUseCases([])
     setSelectedUseCase(null)
+    setError(null) // Clear any previous errors
 
     try {
       // Generate tactical use cases
@@ -332,6 +333,7 @@ const BusinessUnderstandingNew = () => {
         const msg = response.data?.error || response.data?.message || 'Error generating use cases'
         setUseCaseError(msg)
         setError(msg)
+        setShowUseCaseModal(true) // Show modal even on error so user can see the error message
       }
     } catch (err) {
       // Prefer server-provided error message.
@@ -346,6 +348,7 @@ const BusinessUnderstandingNew = () => {
 
       setUseCaseError(msg)
       setError(msg)
+      setShowUseCaseModal(true) // Show modal even on error so user can see the error message
     } finally {
       setLoadingUseCases(false)
     }
