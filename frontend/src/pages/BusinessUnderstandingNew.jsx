@@ -108,6 +108,40 @@ const BusinessUnderstandingNew = () => {
   const [loadingUseCases, setLoadingUseCases] = useState(false)
   const [useCaseError, setUseCaseError] = useState(null)
 
+  // Normalize backend responses defensively (supports multiple shapes)
+  const normalizeUseCases = (payload) => {
+    const raw = payload?.data?.use_cases ?? payload?.data?.useCases ?? payload?.use_cases ?? payload?.useCases ?? []
+    const list = Array.isArray(raw) ? raw : []
+
+    return list
+      .map((uc) => {
+        if (!uc || typeof uc !== 'object') return null
+        const expectedOutcomes = Array.isArray(uc.expected_outcomes)
+          ? uc.expected_outcomes
+          : Array.isArray(uc.expectedOutcomes)
+            ? uc.expectedOutcomes
+            : []
+        const successCriteria = Array.isArray(uc.success_criteria)
+          ? uc.success_criteria
+          : Array.isArray(uc.successCriteria)
+            ? uc.successCriteria
+            : []
+
+        const alignmentScore = uc.alignment_score ?? uc.alignmentScore
+
+        return {
+          title: uc.title ?? 'Untitled use case',
+          description: uc.description ?? '',
+          expected_outcomes: expectedOutcomes,
+          success_criteria: successCriteria,
+          timeline: uc.timeline ?? uc.estimated_timeline ?? uc.estimatedTimeline ?? 'TBD',
+          implementation_complexity: uc.implementation_complexity ?? uc.implementationComplexity ?? uc.complexity ?? 'TBD',
+          alignment_score: typeof alignmentScore === 'number' ? alignmentScore : Number(alignmentScore) || null,
+        }
+      })
+      .filter(Boolean)
+  }
+
   // Loading states
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -267,6 +301,8 @@ const BusinessUnderstandingNew = () => {
 
     setLoadingUseCases(true)
     setUseCaseError(null)
+    setGeneratedUseCases([])
+    setSelectedUseCase(null)
 
     try {
       // Generate tactical use cases
@@ -279,12 +315,37 @@ const BusinessUnderstandingNew = () => {
       })
 
       if (response.data.success) {
-        setGeneratedUseCases(response.data.data.use_cases)
+        const normalized = normalizeUseCases(response.data)
+        setGeneratedUseCases(normalized)
+
+        if (normalized.length === 0) {
+          const msg = 'Use cases were generated but returned empty. Please try again.'
+          setUseCaseError(msg)
+          setError(msg)
+          setShowUseCaseModal(true)
+          return
+        }
+
         setShowUseCaseModal(true)
+      } else {
+        // Backend returned a non-success payload; surface the error if present.
+        const msg = response.data?.error || response.data?.message || 'Error generating use cases'
+        setUseCaseError(msg)
+        setError(msg)
       }
     } catch (err) {
-      setUseCaseError(err.response?.data?.detail || 'Error generating use cases')
-      setError(err.response?.data?.detail || 'Error generating use cases')
+      // Prefer server-provided error message.
+      const serverMsg = err.response?.data?.detail || err.response?.data?.message || err.response?.data?.error
+      const status = err.response?.status
+      const fallback = status === 401
+        ? 'Your session expired. Please sign in again.'
+        : status === 422
+          ? 'Invalid request. Please review your inputs and try again.'
+          : 'Error generating use cases'
+      const msg = serverMsg || fallback
+
+      setUseCaseError(msg)
+      setError(msg)
     } finally {
       setLoadingUseCases(false)
     }
@@ -829,6 +890,10 @@ const BusinessUnderstandingNew = () => {
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
               {useCaseError && <Alert severity="error">{useCaseError}</Alert>}
+
+              {!useCaseError && generatedUseCases.length === 0 && (
+                <Alert severity="info">No use cases to display yet.</Alert>
+              )}
               
               {generatedUseCases.map((useCase, index) => {
                 const isSelected = selectedUseCase?.title === useCase.title
@@ -852,8 +917,8 @@ const BusinessUnderstandingNew = () => {
                             {useCase.title}
                           </Typography>
                           <Chip 
-                            label={`${useCase.alignment_score}% match`}
-                            color={useCase.alignment_score >= 80 ? 'success' : 'primary'}
+                            label={useCase.alignment_score != null ? `${useCase.alignment_score}% match` : 'Match'}
+                            color={useCase.alignment_score != null && useCase.alignment_score >= 80 ? 'success' : 'primary'}
                             size="small"
                           />
                         </Stack>
@@ -867,7 +932,7 @@ const BusinessUnderstandingNew = () => {
                             Expected Outcomes
                           </Typography>
                           <Stack spacing={0.5}>
-                            {useCase.expected_outcomes.map((outcome, idx) => (
+                            {(useCase.expected_outcomes || []).map((outcome, idx) => (
                               <Typography key={idx} variant="body2" color="text.secondary">
                                 • {outcome}
                               </Typography>

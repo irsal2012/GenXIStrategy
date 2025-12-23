@@ -47,22 +47,20 @@ class BaseAgent:
     
     async def _call_openai(
         self,
-        prompt: str,
-        system_message: str,
+        messages: list,
         temperature: float = 0.5,
         response_format: Optional[Dict[str, str]] = None
-    ) -> Dict[str, Any]:
+    ) -> str:
         """
         Make a call to OpenAI API with error handling and logging.
         
         Args:
-            prompt: User prompt
-            system_message: System message defining agent role
+            messages: List of message dictionaries with role and content
             temperature: Sampling temperature (0.0-1.0)
             response_format: Optional response format (e.g., {"type": "json_object"})
             
         Returns:
-            Dictionary with success status and data or error
+            String response content from the API
         """
         try:
             logger.info(f"{self.agent_name}: Making OpenAI API call")
@@ -70,10 +68,7 @@ class BaseAgent:
             # Prepare API call parameters
             api_params = {
                 "model": self.model,
-                "messages": [
-                    {"role": "system", "content": system_message},
-                    {"role": "user", "content": prompt}
-                ],
+                "messages": messages,
                 "temperature": temperature
             }
             
@@ -89,14 +84,11 @@ class BaseAgent:
             
             logger.info(f"{self.agent_name}: OpenAI API call successful")
             
-            return {
-                "success": True,
-                "data": content
-            }
+            return content
             
         except Exception as e:
             logger.error(f"{self.agent_name}: OpenAI API call failed - {str(e)}")
-            return self._handle_error(e)
+            raise
     
     def _handle_error(self, exception: Exception) -> Dict[str, Any]:
         """
@@ -172,47 +164,85 @@ class BaseAgent:
     def _format_success_response(
         self,
         data: Any,
-        method_name: str
+        message: str = None
     ) -> Dict[str, Any]:
         """
         Format a successful response with metadata.
         
         Args:
             data: Response data
-            method_name: Name of the method
+            message: Optional message describing the result
             
         Returns:
             Formatted response dictionary
         """
-        self._log_agent_call(method_name, success=True)
-        
-        return {
+        response = {
             "success": True,
             "data": data,
-            "agent": self.agent_name,
-            "method": method_name
+            "agent": self.agent_name
         }
+        
+        if message:
+            response["message"] = message
+        
+        return response
     
     def _format_error_response(
         self,
-        error: str,
-        method_name: str
+        error: str
     ) -> Dict[str, Any]:
         """
         Format an error response with metadata.
         
         Args:
             error: Error message
-            method_name: Name of the method
             
         Returns:
             Formatted error dictionary
         """
-        self._log_agent_call(method_name, success=False, details=error)
-        
         return {
             "success": False,
             "error": error,
-            "agent": self.agent_name,
-            "method": method_name
+            "agent": self.agent_name
         }
+    
+    def _parse_json_response(self, content: str) -> dict:
+        """
+        Parse JSON response from OpenAI API.
+        
+        Args:
+            content: String content from API response
+            
+        Returns:
+            Parsed JSON dictionary
+        """
+        import json
+        
+        # Try direct JSON parse first
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            pass
+        
+        # Try to extract JSON from markdown code blocks
+        if "```json" in content:
+            start = content.find("```json") + 7
+            end = content.find("```", start)
+            if end != -1:
+                json_str = content[start:end].strip()
+                return json.loads(json_str)
+        elif "```" in content:
+            start = content.find("```") + 3
+            end = content.find("```", start)
+            if end != -1:
+                json_str = content[start:end].strip()
+                return json.loads(json_str)
+        
+        # Try to find JSON object in the content
+        start = content.find("{")
+        end = content.rfind("}")
+        if start != -1 and end != -1:
+            json_str = content[start:end+1]
+            return json.loads(json_str)
+        
+        raise ValueError(f"Could not parse JSON from response: {content[:200]}")

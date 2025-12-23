@@ -266,6 +266,12 @@ async def generate_tactical_use_cases(
     Step 3.5 of PMI-CPMAI workflow.
     """
     try:
+        # Basic request validation (prevents ambiguous 500s)
+        if not business_problem or len(business_problem.strip()) < 10:
+            raise HTTPException(status_code=422, detail="business_problem must be at least 10 characters")
+        if not ai_pattern or not ai_pattern.strip():
+            raise HTTPException(status_code=422, detail="ai_pattern is required")
+
         # Get initiative details
         initiative = db.query(Initiative).filter(Initiative.id == initiative_id).first()
         if not initiative:
@@ -305,6 +311,13 @@ async def generate_tactical_use_cases(
         
         pattern_meta = next((p for p in PMI_PATTERNS if p["name"] == ai_pattern), None)
         pattern_examples = pattern_meta["examples"] if pattern_meta else []
+
+        if not pattern_examples:
+            # Not fatal, but helps prompt quality and debugging if pattern names drift.
+            import logging
+            logging.getLogger(__name__).warning(
+                "Unknown ai_pattern '%s' - continuing with empty pattern_examples", ai_pattern
+            )
         
         # Prepare initiative details
         initiative_details = {
@@ -317,17 +330,25 @@ async def generate_tactical_use_cases(
         # Generate use cases using AI
         from openai import OpenAI
         from app.core.config import settings
-        
+
+        # Hard fail early if API key is missing rather than returning confusing "NoneType" errors.
+        if not getattr(settings, "openai_api_key", None):
+            raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not configured")
+
         client = OpenAI(api_key=settings.openai_api_key)
         agent = AIProjectManagerAgent(client, settings.OPENAI_MODEL)
-        
+
         result = await agent.generate_tactical_use_cases(
             business_problem=business_problem,
             ai_pattern=ai_pattern,
             initiative_details=initiative_details,
-            pattern_examples=pattern_examples
+            pattern_examples=pattern_examples,
         )
-        
+
+        # Ensure frontend gets an HTTP error when the agent failed.
+        if not result.get("success"):
+            raise HTTPException(status_code=502, detail=result.get("error", "Failed to generate tactical use cases"))
+
         return result
     except HTTPException:
         raise

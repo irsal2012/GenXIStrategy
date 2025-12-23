@@ -4,8 +4,44 @@ AI-powered insights and recommendations for AI project management
 Enhanced with PMI-CPMAI pattern classification and initiative matching
 """
 from typing import Dict, Any, List
+import json
 from openai import OpenAI
 from app.agents.base_agent import BaseAgent
+
+
+def _extract_json_from_text(text: str) -> dict:
+    """Best-effort JSON extraction when the model returns JSON wrapped in prose/markdown."""
+    text = (text or "").strip()
+    if not text:
+        raise ValueError("Empty response from model")
+
+    # Fast-path
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+
+    # Strip markdown fences
+    if "```" in text:
+        parts = [p.strip() for p in text.split("```") if p.strip()]
+        # Prefer parts that look like JSON
+        for p in parts:
+            candidate = p
+            if candidate.lower().startswith("json"):
+                candidate = candidate[4:].strip()
+            try:
+                return json.loads(candidate)
+            except Exception:
+                continue
+
+    # Fallback: grab first top-level JSON object substring
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        candidate = text[start : end + 1]
+        return json.loads(candidate)
+
+    raise ValueError("Failed to parse JSON from model response")
 
 
 class AIProjectManagerAgent(BaseAgent):
@@ -73,19 +109,26 @@ Analyze this problem and respond in JSON format:
 """
         
         try:
-            # Call OpenAI with proper parameters
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.2,  # Low temperature for consistent classification
-                response_format={"type": "json_object"}
-            )
-            
-            # Extract and parse JSON response
+            # Prefer strict JSON mode when supported by the configured model.
+            api_params = {
+                "model": self.model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.2,
+            }
+
+            # Some models (or older OpenAI library combos) can error on response_format.
+            # We try strict JSON first, then fall back to plain text + robust parsing.
+            try:
+                response = self.client.chat.completions.create(
+                    **api_params,
+                    response_format={"type": "json_object"}
+                )
+            except Exception:
+                response = self.client.chat.completions.create(**api_params)
+
             content = response.choices[0].message.content
-            import json
-            result = json.loads(content)
-            
+            result = _extract_json_from_text(content)
+
             return {
                 "success": True,
                 "data": result,
@@ -170,19 +213,27 @@ Generate 3-5 use cases, ordered by alignment score (highest first).
 """
         
         try:
-            # Call OpenAI with proper parameters
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.4,  # Moderate temperature for creative but focused suggestions
-                response_format={"type": "json_object"}
-            )
-            
-            # Extract and parse JSON response
+            api_params = {
+                "model": self.model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.4,
+            }
+
+            try:
+                response = self.client.chat.completions.create(
+                    **api_params,
+                    response_format={"type": "json_object"}
+                )
+            except Exception:
+                response = self.client.chat.completions.create(**api_params)
+
             content = response.choices[0].message.content
-            import json
-            result = json.loads(content)
-            
+            result = _extract_json_from_text(content)
+
+            # Basic shape validation to avoid downstream UI crashes
+            if not isinstance(result, dict) or "use_cases" not in result or not isinstance(result.get("use_cases"), list):
+                raise ValueError("Model response missing required 'use_cases' list")
+
             return {
                 "success": True,
                 "data": result,
@@ -267,19 +318,23 @@ Respond in JSON format:
 """
         
         try:
-            # Call OpenAI with proper parameters
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.3,
-                response_format={"type": "json_object"}
-            )
-            
-            # Extract and parse JSON response
+            api_params = {
+                "model": self.model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.3,
+            }
+
+            try:
+                response = self.client.chat.completions.create(
+                    **api_params,
+                    response_format={"type": "json_object"}
+                )
+            except Exception:
+                response = self.client.chat.completions.create(**api_params)
+
             content = response.choices[0].message.content
-            import json
-            result = json.loads(content)
-            
+            result = _extract_json_from_text(content)
+
             return {
                 "success": True,
                 "data": result,
@@ -342,7 +397,7 @@ Respond in JSON format:
             )
             
             result = self._parse_json_response(response)
-            self._log_agent_call("analyze_data_feasibility", {"business_objectives": business_objectives}, result)
+            self._log_agent_call("analyze_data_feasibility", True, "Data feasibility analysis completed")
             
             return self._format_success_response(
                 data=result,
@@ -394,7 +449,7 @@ Respond in JSON format:
             )
             
             result = self._parse_json_response(response)
-            self._log_agent_call("assess_data_quality", {"dataset_name": dataset_name}, result)
+            self._log_agent_call("assess_data_quality", True, "Data quality assessment completed")
             
             return self._format_success_response(
                 data=result,
@@ -453,7 +508,7 @@ Respond in JSON format:
             )
             
             result = self._parse_json_response(response)
-            self._log_agent_call("suggest_hyperparameters", {"model_type": model_type, "algorithm": algorithm}, result)
+            self._log_agent_call("suggest_hyperparameters", True, "Hyperparameter suggestions generated")
             
             return self._format_success_response(
                 data=result,
@@ -507,7 +562,7 @@ Respond in JSON format:
             )
             
             result = self._parse_json_response(response)
-            self._log_agent_call("interpret_model_results", {"metrics_count": len(evaluation_metrics)}, result)
+            self._log_agent_call("interpret_model_results", True, "Model interpretation completed")
             
             return self._format_success_response(
                 data=result,
@@ -562,7 +617,7 @@ Respond in JSON format:
             )
             
             result = self._parse_json_response(response)
-            self._log_agent_call("detect_drift", {"current_metrics": len(current_metrics)}, result)
+            self._log_agent_call("detect_drift", True, "Drift detection completed")
             
             return self._format_success_response(
                 data=result,
@@ -621,7 +676,7 @@ Respond in JSON format:
             )
             
             result = self._parse_json_response(response)
-            self._log_agent_call("recommend_next_steps", {"current_phase": current_phase}, result)
+            self._log_agent_call("recommend_next_steps", True, "Next steps recommendations generated")
             
             return self._format_success_response(
                 data=result,
@@ -684,7 +739,7 @@ Respond in JSON format:
             )
             
             result = self._parse_json_response(response)
-            self._log_agent_call("analyze_deployment_readiness", {"model_metrics": len(model_metrics)}, result)
+            self._log_agent_call("analyze_deployment_readiness", True, "Deployment readiness analysis completed")
             
             return self._format_success_response(
                 data=result,

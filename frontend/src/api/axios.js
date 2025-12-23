@@ -30,6 +30,18 @@ axiosInstance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+
+    // Avoid CORS preflight where possible.
+    // Vite proxy runs in dev, but in some environments (or when hitting the backend directly)
+    // the Authorization header triggers an OPTIONS preflight. Keeping requests "simple"
+    // reduces chance of seeing 405 Method Not Allowed preflight issues.
+    //
+    // IMPORTANT: Do NOT set Content-Type for requests with no body.
+    if (config.data == null) {
+      // axios may set this implicitly in some cases; ensure it's removed.
+      delete config.headers['Content-Type']
+      delete config.headers['content-type']
+    }
     return config
   },
   (error) => {

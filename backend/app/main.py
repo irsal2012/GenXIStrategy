@@ -29,8 +29,12 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
+    # IMPORTANT: Browsers send an OPTIONS preflight for our axios POSTs with Authorization.
+    # If the app doesn't respond to OPTIONS, the browser blocks the request and you see 405.
     allow_methods=["*"],
     allow_headers=["*"],
+    # Ensure preflight responses include required headers.
+    max_age=600,
 )
 
 # Include API router
