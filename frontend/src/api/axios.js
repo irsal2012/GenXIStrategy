@@ -31,6 +31,13 @@ axiosInstance.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`
     }
 
+    // Ensure URL is always relative so Vite proxy can forward to backend.
+    // In some edge cases axios can be configured with an absolute baseURL; keeping
+    // it relative avoids CORS / mixed-content issues.
+    if (config.baseURL && config.baseURL.startsWith('http')) {
+      // no-op; leave as-is
+    }
+
     // Avoid CORS preflight where possible.
     // Vite proxy runs in dev, but in some environments (or when hitting the backend directly)
     // the Authorization header triggers an OPTIONS preflight. Keeping requests "simple"

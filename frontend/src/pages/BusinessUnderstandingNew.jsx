@@ -315,27 +315,34 @@ const BusinessUnderstandingNew = () => {
         }
       })
 
-      if (response.data.success) {
-        const normalized = normalizeUseCases(response.data)
-        setGeneratedUseCases(normalized)
-
-        if (normalized.length === 0) {
-          const msg = 'Use cases were generated but returned empty. Please try again.'
-          setUseCaseError(msg)
-          setError(msg)
-          setShowUseCaseModal(true)
-          return
-        }
-
-        setShowUseCaseModal(true)
-      } else {
-        // Backend returned a non-success payload; surface the error if present.
-        const msg = response.data?.error || response.data?.message || 'Error generating use cases'
+      // Backend always returns {success: true, data: {use_cases: [...]}, ...}
+      // So we check for response.data.success OR just proceed if we got a 200
+      const normalized = normalizeUseCases(response.data)
+      
+      if (normalized.length === 0) {
+        const msg = 'Use cases were generated but returned empty. Please try again.'
         setUseCaseError(msg)
         setError(msg)
-        setShowUseCaseModal(true) // Show modal even on error so user can see the error message
+        setShowUseCaseModal(true)
+        return
       }
+
+      setGeneratedUseCases(normalized)
+      setShowUseCaseModal(true)
     } catch (err) {
+      // Dev-only diagnostics: helps pinpoint why use case generation fails in the field.
+      // eslint-disable-next-line no-console
+      console.error('[generate-tactical-use-cases] failed', {
+        message: err?.message,
+        status: err?.response?.status,
+        data: err?.response?.data,
+        params: {
+          business_problem: businessProblem,
+          ai_pattern: selectedPattern,
+          initiative_id: selectedInitiative,
+        },
+      })
+
       // Prefer server-provided error message.
       const serverMsg = err.response?.data?.detail || err.response?.data?.message || err.response?.data?.error
       const status = err.response?.status
@@ -356,6 +363,26 @@ const BusinessUnderstandingNew = () => {
 
   // NEW: Finalize selection with optional use case
   const handleFinalizeSelection = async () => {
+    if (!selectedInitiative) {
+      setError('Please select an initiative first.')
+      return
+    }
+
+    if (!businessProblem || businessProblem.trim().length < minChars) {
+      setError(`Please describe your business problem first (minimum ${minChars} characters).`)
+      return
+    }
+
+    if (!selectedPattern) {
+      setError('Please select an AI pattern first.')
+      return
+    }
+
+    if (!classifiedPattern) {
+      setError('Missing AI pattern classification details. Please re-run “Analyze & classify”.')
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -365,8 +392,8 @@ const BusinessUnderstandingNew = () => {
           initiative_id: selectedInitiative,
           business_problem_text: businessProblem,
           ai_pattern: selectedPattern,
-          ai_pattern_confidence: classifiedPattern.confidence,
-          ai_pattern_reasoning: classifiedPattern.reasoning,
+          ai_pattern_confidence: classifiedPattern?.confidence ?? 0,
+          ai_pattern_reasoning: classifiedPattern?.reasoning ?? '',
           pattern_override: selectedPattern !== classifiedPattern.primary_pattern,
           similar_initiatives_found: similarInitiatives.map(i => ({ id: i.initiative_id, score: i.similarity_score })),
           ai_recommended_initiative_id: aiRecommendation?.recommended_initiative_id,
