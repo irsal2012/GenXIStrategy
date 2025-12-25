@@ -110,7 +110,12 @@ const BusinessUnderstandingNew = () => {
 
   // Normalize backend responses defensively (supports multiple shapes)
   const normalizeUseCases = (payload) => {
-    const raw = payload?.data?.use_cases ?? payload?.data?.useCases ?? payload?.use_cases ?? payload?.useCases ?? []
+    // Accept either:
+    // - axios response: { data: { success, data: { use_cases } } }
+    // - response.data directly: { success, data: { use_cases } }
+    const container = payload?.data?.data ? payload.data : payload
+
+    const raw = container?.data?.use_cases ?? container?.data?.useCases ?? container?.use_cases ?? container?.useCases ?? []
     const list = Array.isArray(raw) ? raw : []
 
     return list
@@ -307,17 +312,35 @@ const BusinessUnderstandingNew = () => {
 
     try {
       // Generate tactical use cases
-      const response = await axios.post('/ai-projects/pmi-cpmai/generate-tactical-use-cases', null, {
-        params: {
-          business_problem: businessProblem,
-          ai_pattern: selectedPattern,
-          initiative_id: selectedInitiative
+      // IMPORTANT: backend expects `business_problem` (not business_problem_text)
+      // and most endpoints in this workflow are `Query` parameters.
+      // We also defensively URL-encode via axios params.
+      const response = await axios.post(
+        '/ai-projects/pmi-cpmai/generate-tactical-use-cases',
+        null,
+        {
+          params: {
+            business_problem: businessProblem,
+            ai_pattern: selectedPattern,
+            initiative_id: selectedInitiative,
+          },
         }
-      })
+      )
 
-      // Backend always returns {success: true, data: {use_cases: [...]}, ...}
-      // So we check for response.data.success OR just proceed if we got a 200
-      const normalized = normalizeUseCases(response.data)
+      // Surface backend failures explicitly rather than falling through
+      // to a generic “Error generating use cases”.
+      const body = response?.data
+      if (body?.success === false) {
+        const msg = body?.error || body?.message || 'Failed to generate use cases'
+        setUseCaseError(msg)
+        setError(msg)
+        setShowUseCaseModal(true)
+        return
+      }
+
+      // Backend returns {success: bool, data: {use_cases: [...]}, ...}
+      // Our normalizer supports multiple shapes.
+      const normalized = normalizeUseCases(response)
       
       if (normalized.length === 0) {
         const msg = 'Use cases were generated but returned empty. Please try again.'
@@ -344,14 +367,19 @@ const BusinessUnderstandingNew = () => {
       })
 
       // Prefer server-provided error message.
-      const serverMsg = err.response?.data?.detail || err.response?.data?.message || err.response?.data?.error
       const status = err.response?.status
-      const fallback = status === 401
-        ? 'Your session expired. Please sign in again.'
-        : status === 422
-          ? 'Invalid request. Please review your inputs and try again.'
-          : 'Error generating use cases'
-      const msg = serverMsg || fallback
+      const serverMsg = err.response?.data?.detail || err.response?.data?.message || err.response?.data?.error
+      // Ensure we never regress to an unhelpful generic message.
+      // If there's no serverMsg, include http status and axios error.message.
+      const msg = serverMsg || (
+        status === 401
+          ? 'Your session expired. Please sign in again.'
+          : status === 404
+            ? 'Selected initiative was not found. Please refresh and try again.'
+            : status === 422
+              ? 'Invalid request. Please review your inputs and try again.'
+              : `Error generating use cases${status ? ` (HTTP ${status})` : ''}${err?.message ? `: ${err.message}` : ''}`
+      )
 
       setUseCaseError(msg)
       setError(msg)

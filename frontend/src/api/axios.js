@@ -11,7 +11,10 @@ const axiosInstance = axios.create({
   // didn’t reach the API at all (proxy not running, wrong port, mixed content,
   // or CORS/preflight failing).
   baseURL: '/api/v1',
-  timeout: 15000,
+  // Some endpoints (e.g., OpenAI-backed tactical use-case generation) can take
+  // longer than 15s depending on model latency and load.
+  // Increase to reduce false timeouts while still keeping the UI responsive.
+  timeout: 60000,
 })
 
 // Add request interceptor to include auth token
