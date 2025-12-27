@@ -149,18 +149,6 @@ function InitiativeDetail() {
     }
   }
 
-  const getStatusColor = (status) => {
-    const colors = {
-      IDEATION: 'info',
-      PLANNING: 'warning',
-      IN_PROGRESS: 'primary',
-      ON_HOLD: 'default',
-      COMPLETED: 'success',
-      CANCELLED: 'error',
-    }
-    return colors[status] || 'default'
-  }
-
   const getPriorityColor = (priority) => {
     const colors = {
       CRITICAL: 'error',
@@ -254,13 +242,6 @@ function InitiativeDetail() {
         <Box display="flex" gap={1}>
           <Button
             variant="outlined"
-            startIcon={<Edit />}
-            onClick={() => navigate(`/initiatives/${id}/edit`)}
-          >
-            Edit
-          </Button>
-          <Button
-            variant="outlined"
             color="error"
             startIcon={<Delete />}
             onClick={handleDelete}
@@ -270,13 +251,8 @@ function InitiativeDetail() {
         </Box>
       </Box>
 
-      {/* Status and Priority Chips */}
+      {/* Priority Chip */}
       <Box display="flex" gap={1} mb={3}>
-        <Chip
-          label={initiative.status}
-          color={getStatusColor(initiative.status)}
-          icon={<CheckCircle />}
-        />
         <Chip
           label={`Priority: ${initiative.priority}`}
           color={getPriorityColor(initiative.priority)}

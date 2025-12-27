@@ -5,15 +5,6 @@ import enum
 from app.core.database import Base
 
 
-class InitiativeStatus(str, enum.Enum):
-    IDEATION = "ideation"
-    PLANNING = "planning"
-    PILOT = "pilot"
-    PRODUCTION = "production"
-    RETIRED = "retired"
-    ON_HOLD = "on_hold"
-
-
 class InitiativePriority(str, enum.Enum):
     CRITICAL = "critical"
     HIGH = "high"
@@ -35,7 +26,6 @@ class Initiative(Base):
     title = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=False)
     business_objective = Column(Text)
-    status = Column(Enum(InitiativeStatus), nullable=False, default=InitiativeStatus.IDEATION)
     priority = Column(Enum(InitiativePriority), nullable=False, default=InitiativePriority.MEDIUM)
     
     # Module 1: Taxonomy fields

@@ -4,7 +4,7 @@ from sqlalchemy import func, and_, case, extract
 from app.core.database import get_db
 from app.api.deps import get_current_active_user
 from app.models.user import User
-from app.models.initiative import Initiative, InitiativeStatus, InitiativePriority, AIType
+from app.models.initiative import Initiative, InitiativePriority, AIType
 from app.models.risk import Risk, RiskSeverity
 from app.models.benefits import BenefitRealization, KPIBaseline
 from app.services.openai_service import openai_service
@@ -61,13 +61,9 @@ def get_dashboard_data(
             }
         
         # Active initiatives (in progress states)
-        active_initiatives = db.query(Initiative).filter(
-            Initiative.status.in_([
-                InitiativeStatus.PLANNING,
-                InitiativeStatus.PILOT,
-                InitiativeStatus.PRODUCTION
-            ])
-        ).count()
+        # Without Initiative.status, we can approximate "active" as initiatives with a target completion date in the future
+        # or simply treat all initiatives as active for now.
+        active_initiatives = db.query(Initiative).count()
         
         # Budget metrics with null handling
         budget_data = db.query(
@@ -96,10 +92,7 @@ def get_dashboard_data(
         low_risk_count = sum(item.count for item in risk_counts if item.severity == RiskSeverity.LOW)
         
         # Status distribution
-        status_distribution = db.query(
-            Initiative.status,
-            func.count(Initiative.id).label('count')
-        ).group_by(Initiative.status).all()
+        status_distribution = []
         
         # Priority distribution
         priority_distribution = db.query(
@@ -114,9 +107,7 @@ def get_dashboard_data(
         ).filter(Initiative.ai_type.isnot(None)).group_by(Initiative.ai_type).all()
         
         # Completion metrics
-        completed_initiatives = db.query(Initiative).filter(
-            Initiative.status == InitiativeStatus.PRODUCTION
-        ).count()
+        completed_initiatives = 0
         completion_rate = (completed_initiatives / total_initiatives * 100) if total_initiatives > 0 else 0.0
         
         # On-track percentage (initiatives without high-risk issues)
@@ -163,10 +154,7 @@ def get_dashboard_data(
             "high_risk_count": high_risk_count,
             "medium_risk_count": medium_risk_count,
             "low_risk_count": low_risk_count,
-            "status_distribution": [
-                {"status": item.status.value, "count": item.count}
-                for item in status_distribution
-            ],
+            "status_distribution": [],
             "priority_distribution": [
                 {"priority": item.priority.value, "count": item.count}
                 for item in priority_distribution
@@ -219,13 +207,8 @@ async def get_portfolio_summary(
                 }
             }
         
-        active_initiatives = db.query(Initiative).filter(
-            Initiative.status.in_([
-                InitiativeStatus.PLANNING,
-                InitiativeStatus.PILOT,
-                InitiativeStatus.PRODUCTION
-            ])
-        ).count()
+        # Without Initiative.status, approximate "active" as all initiatives.
+        active_initiatives = db.query(Initiative).count()
         
         budget_data = db.query(
             func.coalesce(func.sum(Initiative.budget_allocated), 0).label('total_allocated')

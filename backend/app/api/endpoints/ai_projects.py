@@ -111,8 +111,7 @@ async def find_similar_initiatives(
                     "id": init.id,
                     "title": init.title,
                     "description": init.description,
-                    "business_objective": init.business_objective,
-                    "status": init.status.value if init.status else None
+                    "status": None
                 }
                 for init in all_initiatives
             ]
@@ -372,7 +371,7 @@ async def generate_tactical_use_cases(
             "title": initiative.title,
             "description": initiative.description,
             "business_objective": initiative.business_objective,
-            "status": initiative.status.value if initiative.status else None
+            "status": None
         }
         
         # Generate use cases using AI
@@ -450,9 +449,8 @@ async def rebuild_all_embeddings(
                 "id": init.id,
                 "title": init.title,
                 "description": init.description,
-                "business_objective": init.business_objective or "",
                 "ai_pattern": "",  # Will be populated as initiatives go through workflow
-                "status": init.status.value if init.status else ""
+                "status": ""
             }
             for init in all_initiatives
         ]

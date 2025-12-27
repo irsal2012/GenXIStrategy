@@ -12,7 +12,7 @@ from app.models.reporting import (
     ReportingMetric, NarrativeTemplate, ReportSchedule,
     DashboardType, ReportType, ReportStatus, MetricType
 )
-from app.models.initiative import Initiative, InitiativeStatus
+from app.models.initiative import Initiative
 from app.models.benefits import BenefitRealization, ValueLeakage, KPIBaseline
 from app.models.risk import Risk
 from app.models.governance import GovernanceWorkflow, WorkflowStage
@@ -44,14 +44,8 @@ class ReportingService:
             for init in initiatives
         )
         
-        # By stage
+        # By stage (status removed)
         by_stage = {}
-        for status in InitiativeStatus:
-            stage_initiatives = [i for i in initiatives if i.status == status]
-            by_stage[status.value] = sum(
-                (i.budget_allocated or 0) * (i.expected_roi or 0) / 100
-                for i in stage_initiatives
-            )
         
         # By AI type
         by_ai_type = {}
@@ -86,7 +80,6 @@ class ReportingService:
                     "title": init.title,
                     "value": (init.budget_allocated or 0) * (init.expected_roi or 0) / 100,
                     "roi": init.expected_roi,
-                    "status": init.status.value
                 }
                 for init in initiatives
             ],
@@ -241,16 +234,11 @@ class ReportingService:
         # Get all initiatives
         initiatives = db.query(Initiative).all()
         
-        # By stage
+        # By stage (status removed)
         by_stage = {}
-        for status in InitiativeStatus:
-            by_stage[status.value] = len([i for i in initiatives if i.status == status])
         
         # Average time in stage (mock - would need historical data)
-        average_time_in_stage = {
-            status.value: 30.0  # Mock: 30 days average
-            for status in InitiativeStatus
-        }
+        average_time_in_stage = {}
         
         # Bottlenecks (stages with >5 initiatives)
         bottlenecks = [
@@ -285,10 +273,7 @@ class ReportingService:
         }
         
         # Velocity metrics (initiatives per month through each stage)
-        velocity_metrics = {
-            status.value: 2.5  # Mock: 2.5 initiatives per month
-            for status in InitiativeStatus
-        }
+        velocity_metrics = {}
         
         return StageDistributionData(
             by_stage=by_stage,
@@ -359,10 +344,7 @@ class ReportingService:
         
         # Get all initiatives
         initiatives = db.query(Initiative).all()
-        active_initiatives = [i for i in initiatives if i.status in [
-            InitiativeStatus.in_progress,
-            InitiativeStatus.planning
-        ]]
+        active_initiatives = initiatives
         
         # Total budget
         total_budget = sum(i.budget_allocated or 0 for i in initiatives)
@@ -395,10 +377,10 @@ class ReportingService:
         
         # Key metrics
         key_metrics = {
-            "initiatives_on_track": len([i for i in active_initiatives if i.status == InitiativeStatus.in_progress]),
-            "initiatives_at_risk": len([i for i in initiatives if i.status == InitiativeStatus.on_hold]),
+            "initiatives_on_track": 0,
+            "initiatives_at_risk": 0,
             "budget_utilization": (total_budget / 10000000 * 100) if total_budget else 0,  # Mock: $10M total budget
-            "value_realization_rate": (total_value_delivered / total_budget * 100) if total_budget > 0 else 0
+            "value_realization_rate": (total_value_delivered / total_budget * 100) if total_budget > 0 else 0,
         }
         
         return PortfolioHealthData(

@@ -19,15 +19,6 @@ import {
 import { ArrowBack, Save } from '@mui/icons-material'
 import { createInitiative } from '../store/slices/initiativesSlice'
 
-const statusOptions = [
-  { value: 'ideation', label: 'Ideation' },
-  { value: 'planning', label: 'Planning' },
-  { value: 'pilot', label: 'Pilot' },
-  { value: 'production', label: 'Production' },
-  { value: 'on_hold', label: 'On Hold' },
-  { value: 'retired', label: 'Retired' },
-]
-
 const priorityOptions = [
   { value: 'critical', label: 'Critical' },
   { value: 'high', label: 'High' },
@@ -55,7 +46,6 @@ function InitiativeForm() {
     title: '',
     description: '',
     business_objective: '',
-    status: 'ideation',
     priority: 'medium',
     ai_type: '',
     strategic_domain: '',
@@ -236,25 +226,7 @@ function InitiativeForm() {
               />
             </Grid>
 
-            {/* Status and Priority */}
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth required>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleInputChange}
-                  label="Status"
-                >
-                  {statusOptions.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
+            {/* Priority */}
             <Grid item xs={12} md={6}>
               <FormControl fullWidth required>
                 <InputLabel>Priority</InputLabel>

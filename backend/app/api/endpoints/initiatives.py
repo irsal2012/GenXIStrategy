@@ -47,7 +47,7 @@ async def create_initiative(
             "description": initiative.description,
             "business_objective": initiative.business_objective or "",
             "ai_pattern": "",  # Will be populated when user goes through PMI-CPMAI workflow
-            "status": initiative.status.value if initiative.status else ""
+            "status": ""
         }
         await semantic_search_service.add_or_update_initiative_embedding(initiative_data)
     except Exception as e:
@@ -104,7 +104,7 @@ async def update_initiative(
             "description": initiative.description,
             "business_objective": initiative.business_objective or "",
             "ai_pattern": "",  # Will be populated when user goes through PMI-CPMAI workflow
-            "status": initiative.status.value if initiative.status else ""
+            "status": ""
         }
         await semantic_search_service.add_or_update_initiative_embedding(initiative_data)
     except Exception as e:

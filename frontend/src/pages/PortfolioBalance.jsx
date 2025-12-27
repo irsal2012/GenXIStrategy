@@ -77,11 +77,6 @@ const PortfolioBalance = () => {
     value,
   })) : [];
 
-  const statusData = balance ? Object.entries(balance.by_status).map(([key, value]) => ({
-    name: key.charAt(0).toUpperCase() + key.slice(1),
-    value,
-  })) : [];
-
   const domainData = balance ? Object.entries(balance.by_strategic_domain).map(([key, value]) => ({
     name: key,
     value,
@@ -214,25 +209,6 @@ const PortfolioBalance = () => {
                     <Cell key={`cell-${index}`} fill={COLORS[entry.name.toLowerCase()] || '#999'} />
                   ))}
                 </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </Paper>
-        </Grid>
-
-        {/* Status Distribution */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Status Distribution
-            </Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={statusData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="value" fill="#2196F3" />
               </BarChart>
             </ResponsiveContainer>
           </Paper>

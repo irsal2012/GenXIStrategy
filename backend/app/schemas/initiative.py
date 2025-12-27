@@ -1,14 +1,13 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
-from app.models.initiative import InitiativeStatus, InitiativePriority, AIType
+from app.models.initiative import InitiativePriority, AIType
 
 
 class InitiativeBase(BaseModel):
     title: str
     description: str
     business_objective: Optional[str] = None
-    status: InitiativeStatus = InitiativeStatus.IDEATION
     priority: InitiativePriority = InitiativePriority.MEDIUM
     
     # Module 1: Taxonomy fields
@@ -41,7 +40,6 @@ class InitiativeUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     business_objective: Optional[str] = None
-    status: Optional[InitiativeStatus] = None
     priority: Optional[InitiativePriority] = None
     
     # Module 1: Taxonomy fields

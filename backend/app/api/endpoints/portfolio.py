@@ -4,7 +4,7 @@ from sqlalchemy import func
 from typing import List, Optional, Dict, Any
 from app.api.deps import get_db, get_current_user
 from app.models.user import User
-from app.models.initiative import Initiative, InitiativeStatus, AIType
+from app.models.initiative import Initiative, AIType
 from app.models.scoring import InitiativeScore, InitiativeComparison, ScenarioSimulation
 from app.schemas.scoring import (
     PortfolioBalanceResponse,
@@ -52,11 +52,8 @@ def get_portfolio_balance(
     ).all()
     by_strategic_domain = {domain: count for domain, count in domains if domain}
     
-    # Count by status
-    by_status = {}
-    for status_val in InitiativeStatus:
-        count = db.query(Initiative).filter(Initiative.status == status_val).count()
-        by_status[status_val.value] = count
+    # Status was removed from initiatives; keep key for backwards-compatible response shape.
+    by_status: Dict[str, int] = {}
     
     # Calculate financial metrics
     total_budget = db.query(func.sum(Initiative.budget_allocated)).scalar() or 0.0
@@ -252,10 +249,8 @@ async def simulate_portfolio_scenario(
     if request.initiative_ids:
         initiatives = db.query(Initiative).filter(Initiative.id.in_(request.initiative_ids)).all()
     else:
-        # Consider all active initiatives
-        initiatives = db.query(Initiative).filter(
-            Initiative.status.in_([InitiativeStatus.IDEATION, InitiativeStatus.PLANNING, InitiativeStatus.PILOT])
-        ).all()
+        # Status was removed; consider all initiatives
+        initiatives = db.query(Initiative).all()
     
     # Get scores for initiatives
     scoring_service = ScoringService(db)
@@ -286,7 +281,7 @@ async def simulate_portfolio_scenario(
                 "budget": initiative.budget_allocated or 0,
                 "expected_roi": initiative.expected_roi or 0,
                 "ai_type": initiative.ai_type.value if initiative.ai_type else None,
-                "status": initiative.status.value
+                "status": ""
             })
     
     # Prepare constraints

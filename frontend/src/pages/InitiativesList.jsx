@@ -32,18 +32,6 @@ function InitiativesList() {
     }
   }, [dispatch, isAuthenticated])
 
-  const getStatusColor = (status) => {
-    const colors = {
-      ideation: 'default',
-      planning: 'info',
-      pilot: 'warning',
-      production: 'success',
-      retired: 'error',
-      on_hold: 'default',
-    }
-    return colors[status] || 'default'
-  }
-
   const getPriorityColor = (priority) => {
     const colors = {
       critical: 'error',
@@ -105,7 +93,6 @@ function InitiativesList() {
           <TableHead>
             <TableRow>
               <TableCell>Title</TableCell>
-              <TableCell>Status</TableCell>
               <TableCell>Priority</TableCell>
               <TableCell align="right">Budget</TableCell>
               <TableCell align="right">Expected ROI</TableCell>
@@ -115,7 +102,7 @@ function InitiativesList() {
           <TableBody>
             {error ? (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={5} align="center">
                   <Typography variant="body2" color="error" sx={{ py: 3 }}>
                     {typeof error === 'string' ? error : 'Failed to load initiatives'}
                   </Typography>
@@ -123,7 +110,7 @@ function InitiativesList() {
               </TableRow>
             ) : items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={5} align="center">
                   <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>
                     No initiatives found. Create your first initiative to get started.
                   </Typography>
@@ -142,13 +129,6 @@ function InitiativesList() {
                     <Typography variant="body2" color="text.secondary" noWrap>
                       {initiative.description?.substring(0, 60)}...
                     </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={initiative.status}
-                      color={getStatusColor(initiative.status)}
-                      size="small"
-                    />
                   </TableCell>
                   <TableCell>
                     <Chip

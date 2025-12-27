@@ -202,17 +202,35 @@ const BusinessUnderstandingNew = () => {
     try {
       // Step 2: Classify AI Pattern
       const patternResponse = await axios.post('/ai-projects/pmi-cpmai/classify-pattern', null, {
-        params: { business_problem: businessProblem }
+        params: { business_problem: businessProblem },
       })
 
-      if (patternResponse.data.success) {
-        const patternData = patternResponse.data.data
-        setClassifiedPattern(patternData)
-        setSelectedPattern(patternData.primary_pattern)
-        setCurrentStep(WORKFLOW_STEPS.CLASSIFY_PATTERN)
+      const body = patternResponse?.data
+
+      // Surface backend-declared failures explicitly.
+      if (body?.success === false) {
+        throw new Error(body?.error || body?.message || 'Failed to classify AI pattern')
       }
+
+      // Some backends return `{ success: true, data: {...} }`, others may return just `{...}`.
+      const patternData = body?.data ?? body
+
+      if (!patternData?.primary_pattern) {
+        throw new Error('Classification returned an unexpected response (missing primary_pattern).')
+      }
+
+      setClassifiedPattern(patternData)
+      setSelectedPattern(patternData.primary_pattern)
+      setCurrentStep(WORKFLOW_STEPS.CLASSIFY_PATTERN)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Error analyzing business problem')
+      // Ensure we never fail silently.
+      // eslint-disable-next-line no-console
+      console.error('[classify-pattern] failed', {
+        message: err?.message,
+        status: err?.response?.status,
+        data: err?.response?.data,
+      })
+      setError(err?.response?.data?.detail || err?.message || 'Error analyzing business problem')
     } finally {
       setLoading(false)
     }
@@ -847,7 +865,6 @@ const BusinessUnderstandingNew = () => {
                                   </Stack>
 
                                   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                    <Chip size="small" label={`Status: ${initiative.status}`} variant="outlined" />
                                     {initiative.ai_pattern && (
                                       <Chip size="small" label={`Pattern: ${initiative.ai_pattern}`} variant="outlined" />
                                     )}
@@ -896,7 +913,6 @@ const BusinessUnderstandingNew = () => {
                             Selected initiative
                           </Typography>
                           <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-                            <Chip size="small" label={`Status: ${selectedInitiativeDetails.status}`} variant="outlined" />
                             <Chip
                               size="small"
                               color="primary"

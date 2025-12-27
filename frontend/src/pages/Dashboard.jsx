@@ -125,38 +125,6 @@ function Dashboard() {
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
-              Status Distribution
-            </Typography>
-            {dashboardData.status_distribution?.map((item) => (
-              <Box key={item.status} sx={{ mb: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                  <Typography variant="body2">{item.status}</Typography>
-                  <Typography variant="body2">{item.count}</Typography>
-                </Box>
-                <Box
-                  sx={{
-                    height: 8,
-                    backgroundColor: '#e0e0e0',
-                    borderRadius: 1,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      height: '100%',
-                      width: `${(item.count / dashboardData.total_initiatives) * 100}%`,
-                      backgroundColor: '#1976d2',
-                    }}
-                  />
-                </Box>
-              </Box>
-            ))}
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
               Priority Distribution
             </Typography>
             {dashboardData.priority_distribution?.map((item) => (

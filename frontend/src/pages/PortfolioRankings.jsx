@@ -136,7 +136,6 @@ const PortfolioRankings = () => {
               <TableCell align="center">Value</TableCell>
               <TableCell align="center">Feasibility</TableCell>
               <TableCell align="center">Risk</TableCell>
-              <TableCell align="center">Status</TableCell>
               <TableCell align="center">AI Type</TableCell>
               <TableCell align="center">Actions</TableCell>
             </TableRow>
@@ -216,13 +215,6 @@ const PortfolioRankings = () => {
                     label={initiative.risk_score.toFixed(1)}
                     size="small"
                     color={getScoreColor(initiative.risk_score)}
-                  />
-                </TableCell>
-                <TableCell align="center">
-                  <Chip
-                    label={initiative.status}
-                    size="small"
-                    variant="outlined"
                   />
                 </TableCell>
                 <TableCell align="center">

@@ -239,12 +239,6 @@ function Analytics() {
     },
   ]
 
-  // Prepare status distribution for bar chart
-  const statusChartData = dashboardData.status_distribution?.map((item) => ({
-    name: item.status.charAt(0).toUpperCase() + item.status.slice(1).replace('_', ' '),
-    count: item.count,
-  })) || []
-
   // Prepare priority distribution for pie chart
   const priorityChartData = dashboardData.priority_distribution?.map((item) => ({
     name: item.priority.charAt(0).toUpperCase() + item.priority.slice(1),
@@ -257,7 +251,6 @@ function Analytics() {
     value: item.count,
   })) || []
 
-  const STATUS_COLORS = ['#1976d2', '#2e7d32', '#ed6c02', '#d32f2f', '#9c27b0', '#00796b']
   const PRIORITY_COLORS = ['#d32f2f', '#ed6c02', '#1976d2', '#757575']
   const AI_TYPE_COLORS = ['#1976d2', '#2e7d32', '#ed6c02', '#9c27b0']
 
@@ -401,32 +394,6 @@ function Analytics() {
                 />
                 <RechartsTooltip />
               </RadarChart>
-            </ResponsiveContainer>
-          </Paper>
-        </Grid>
-
-        {/* Status Distribution - Bar Chart */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: '100%' }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-              Initiative Status Distribution
-            </Typography>
-            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-              Current state of all initiatives
-            </Typography>
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart data={statusChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis dataKey="name" tick={{ fill: '#666', fontSize: 11 }} />
-                <YAxis tick={{ fill: '#666', fontSize: 11 }} />
-                <RechartsTooltip />
-                <Legend />
-                <Bar dataKey="count" name="Initiatives" radius={[8, 8, 0, 0]}>
-                  {statusChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
             </ResponsiveContainer>
           </Paper>
         </Grid>

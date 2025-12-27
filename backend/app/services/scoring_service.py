@@ -335,7 +335,6 @@ class ScoringService:
                 "risk_score": score.risk_score,
                 "strategic_alignment_score": score.strategic_alignment_score,
                 "justification": score.score_justification,
-                "status": initiative.status.value,
                 "ai_type": initiative.ai_type.value if initiative.ai_type else None
             })
         

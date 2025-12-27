@@ -1,5 +1,5 @@
 from app.models.user import User, UserRole
-from app.models.initiative import Initiative, InitiativeStatus, InitiativePriority, AIType
+from app.models.initiative import Initiative, InitiativePriority, AIType
 from app.models.risk import Risk, RiskCategory, RiskSeverity, RiskStatus
 from app.models.metric import InitiativeMetric, Milestone
 from app.models.governance import ComplianceRequirement, ComplianceStatus, Policy
@@ -34,7 +34,6 @@ __all__ = [
     "User",
     "UserRole",
     "Initiative",
-    "InitiativeStatus",
     "InitiativePriority",
     "AIType",
     "Risk",
