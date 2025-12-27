@@ -34,6 +34,27 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import LinkIcon from '@mui/icons-material/Link'
 
+const formatPriority = (priority) => {
+  if (!priority) return '—'
+  const p = String(priority).toLowerCase()
+  return p.charAt(0).toUpperCase() + p.slice(1)
+}
+
+const formatCurrencyK = (value) => {
+  if (value == null || value === '') return '—'
+  const num = Number(value)
+  if (Number.isNaN(num)) return '—'
+  // Backend stores budget as a float; UI in screenshots shows e.g. $2500K
+  return `$${Math.round(num)}K`
+}
+
+const formatPercent = (value) => {
+  if (value == null || value === '') return '—'
+  const num = Number(value)
+  if (Number.isNaN(num)) return '—'
+  return `${Math.round(num)}%`
+}
+
 // PMI-CPMAI Seven Patterns
 const PMI_PATTERNS = [
   {
@@ -868,6 +889,27 @@ const BusinessUnderstandingNew = () => {
                                     {initiative.ai_pattern && (
                                       <Chip size="small" label={`Pattern: ${initiative.ai_pattern}`} variant="outlined" />
                                     )}
+
+                                    <Chip
+                                      size="small"
+                                      label={`Priority: ${formatPriority(initiative.priority)}`}
+                                      variant="outlined"
+                                    />
+                                    <Chip
+                                      size="small"
+                                      label={`Budget: ${formatCurrencyK(initiative.budget_allocated)}`}
+                                      variant="outlined"
+                                    />
+                                    <Chip
+                                      size="small"
+                                      label={`Expected ROI: ${formatPercent(initiative.expected_roi)}`}
+                                      variant="outlined"
+                                    />
+                                    <Chip
+                                      size="small"
+                                      label={`Business Value: ${initiative.business_value_score ?? '—'}/10`}
+                                      variant="outlined"
+                                    />
                                   </Stack>
 
                                   {initiative.business_objective && (

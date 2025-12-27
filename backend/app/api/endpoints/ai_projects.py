@@ -111,6 +111,8 @@ async def find_similar_initiatives(
                     "id": init.id,
                     "title": init.title,
                     "description": init.description,
+                    "business_objective": init.business_objective,
+                    "ai_pattern": "",
                     "status": None
                 }
                 for init in all_initiatives
@@ -121,13 +123,36 @@ async def find_similar_initiatives(
                 initiatives=initiatives_dict,
                 top_k=top_k
             )
+
+            # Enrich keyword fallback results with full initiative data too
+            keyword_ids = [r.get("initiative_id") for r in keyword_results if r.get("initiative_id") is not None]
+            full_keyword_inits = db.query(Initiative).filter(Initiative.id.in_(keyword_ids)).all() if keyword_ids else []
+            keyword_lookup = {init.id: init for init in full_keyword_inits}
+
+            enriched_keyword_results = []
+            for r in keyword_results:
+                init_id = r.get("initiative_id")
+                full_init = keyword_lookup.get(init_id)
+                if full_init:
+                    enriched_keyword_results.append({
+                        **r,
+                        "owner_id": full_init.owner_id,
+                        "priority": full_init.priority.value if full_init.priority else None,
+                        "budget_allocated": full_init.budget_allocated,
+                        "expected_roi": full_init.expected_roi,
+                        "business_value_score": full_init.business_value_score,
+                        "technical_feasibility_score": full_init.technical_feasibility_score,
+                        "strategic_alignment_score": full_init.strategic_alignment_score,
+                    })
+                else:
+                    enriched_keyword_results.append(r)
             
             return {
                 "success": True,
                 "data": {
-                    "initiatives": keyword_results,
+                    "initiatives": enriched_keyword_results,
                     "search_method": "keyword",
-                    "total_found": len(keyword_results),
+                    "total_found": len(enriched_keyword_results),
                     "message": "Using keyword search (semantic search returned too few results)"
                 }
             }
@@ -150,6 +175,7 @@ async def find_similar_initiatives(
                     "owner_id": full_init.owner_id,
                     "priority": full_init.priority.value if full_init.priority else None,
                     "budget_allocated": full_init.budget_allocated,
+                    "expected_roi": full_init.expected_roi,
                     "business_value_score": full_init.business_value_score,
                     "technical_feasibility_score": full_init.technical_feasibility_score,
                     "strategic_alignment_score": full_init.strategic_alignment_score
