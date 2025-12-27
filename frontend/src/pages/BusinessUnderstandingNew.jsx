@@ -487,8 +487,18 @@ const BusinessUnderstandingNew = () => {
 
       console.log('[handleFinalizeSelection] Response:', response.data)
 
-      // Navigate to the initiative's business understanding page
-      navigate(`/ai-projects/${selectedInitiative}/business-understanding`)
+      // Close the modal (if still open)
+      setShowUseCaseModal(false)
+
+      // Next step after selecting tactical use case: continue PMI-CPMAI workflow
+      // to the initiative's Business Understanding page.
+      // NOTE: We pass the selected use case via navigation state so the next
+      // page can immediately render it even before refetch.
+      navigate(`/ai-projects/${selectedInitiative}/business-understanding`, {
+        state: {
+          selected_use_case: selectedUseCase || null,
+        },
+      })
     } catch (err) {
       console.error('[handleFinalizeSelection] Error:', err)
       setError(err.response?.data?.detail || 'Error linking business understanding')
@@ -1118,7 +1128,6 @@ const BusinessUnderstandingNew = () => {
             <Button 
               onClick={() => {
                 setSelectedUseCase(null)
-                setShowUseCaseModal(false)
                 handleFinalizeSelection()
               }}
               variant="outlined"
@@ -1127,7 +1136,6 @@ const BusinessUnderstandingNew = () => {
             </Button>
             <Button 
               onClick={() => {
-                setShowUseCaseModal(false)
                 handleFinalizeSelection()
               }}
               variant="contained"
