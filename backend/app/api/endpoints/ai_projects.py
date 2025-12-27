@@ -2,7 +2,7 @@
 API endpoints for Module 7 - AI Project Management
 Complete AI project lifecycle from business understanding through deployment and monitoring
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
@@ -206,7 +206,8 @@ async def link_business_understanding_to_initiative(
     similar_initiatives_found: Optional[List[dict]] = None,
     ai_recommended_initiative_id: Optional[int] = None,
     ai_recommendation_reasoning: Optional[str] = None,
-    selected_use_case: Optional[dict] = None,
+    # NOTE: We accept selected_use_case from request body JSON
+    payload: Optional[dict] = Body(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -215,11 +216,39 @@ async def link_business_understanding_to_initiative(
     Final step of PMI-CPMAI workflow - links problem to selected initiative.
     """
     try:
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        selected_use_case: Optional[dict] = None
+        
+        # Debug logging
+        logger.info(f"[link-business-understanding] Received payload: {payload}")
+        logger.info(f"[link-business-understanding] Payload type: {type(payload)}")
+        
+        # The payload IS the selected use case object directly
+        # Frontend sends: axios.post(url, selectedUseCase || null, {params: {...}})
+        if payload and isinstance(payload, dict):
+            # Check if it's a use case object (has title field)
+            if 'title' in payload:
+                selected_use_case = payload
+                logger.info(f"[link-business-understanding] Extracted use case from payload: {selected_use_case.get('title')}")
+            # Or if it's wrapped in selected_use_case key
+            elif 'selected_use_case' in payload and isinstance(payload['selected_use_case'], dict):
+                selected_use_case = payload['selected_use_case']
+                logger.info(f"[link-business-understanding] Extracted use case from wrapped payload: {selected_use_case.get('title')}")
+            else:
+                logger.warning(f"[link-business-understanding] Payload has no 'title' field. Keys: {list(payload.keys())}")
+        else:
+            logger.info(f"[link-business-understanding] No payload or payload is not a dict")
+
         # Check if business understanding already exists
         existing = AIProjectService.get_business_understanding_by_initiative(db, initiative_id)
         
         if existing:
-            # Update existing
+            # Update existing - DIRECTLY update the database object
+            logger.info(f"[link-business-understanding] Updating existing business understanding ID: {existing.id}")
+            logger.info(f"[link-business-understanding] Before update - selected_use_case: {existing.selected_use_case}")
+            
             existing.business_problem_text = business_problem_text
             existing.ai_pattern = ai_pattern
             existing.ai_pattern_confidence = ai_pattern_confidence
@@ -228,13 +257,27 @@ async def link_business_understanding_to_initiative(
             existing.similar_initiatives_found = similar_initiatives_found
             existing.ai_recommended_initiative_id = ai_recommended_initiative_id
             existing.ai_recommendation_reasoning = ai_recommendation_reasoning
-            existing.selected_use_case = selected_use_case
+            
+            # IMPORTANT: Explicitly set selected_use_case
+            if selected_use_case:
+                existing.selected_use_case = selected_use_case
+                logger.info(f"[link-business-understanding] Setting selected_use_case to: {selected_use_case}")
+            else:
+                logger.warning(f"[link-business-understanding] selected_use_case is None or empty!")
+            
             existing.updated_at = datetime.utcnow()
+            
+            # Mark the field as modified to ensure SQLAlchemy updates it
+            from sqlalchemy.orm.attributes import flag_modified
+            flag_modified(existing, "selected_use_case")
+            
             db.commit()
             db.refresh(existing)
+            logger.info(f"[link-business-understanding] After update - selected_use_case: {existing.selected_use_case}")
             return existing
         else:
             # Create new
+            logger.info(f"[link-business-understanding] Creating new business understanding for initiative {initiative_id}")
             from app.schemas.ai_project import BusinessUnderstandingCreate
             business_understanding_data = BusinessUnderstandingCreate(
                 initiative_id=initiative_id,
@@ -248,8 +291,13 @@ async def link_business_understanding_to_initiative(
                 ai_recommendation_reasoning=ai_recommendation_reasoning,
                 selected_use_case=selected_use_case
             )
-            return AIProjectService.create_business_understanding(db, business_understanding_data, current_user.id)
+            result = AIProjectService.create_business_understanding(db, business_understanding_data, current_user.id)
+            logger.info(f"[link-business-understanding] Created. selected_use_case saved: {result.selected_use_case}")
+            return result
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"[link-business-understanding] Error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

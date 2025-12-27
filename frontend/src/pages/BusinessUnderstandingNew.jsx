@@ -407,7 +407,7 @@ const BusinessUnderstandingNew = () => {
     }
 
     if (!classifiedPattern) {
-      setError('Missing AI pattern classification details. Please re-run “Analyze & classify”.')
+      setError('Missing AI pattern classification details. Please re-run "Analyze & classify".')
       return
     }
 
@@ -415,24 +415,43 @@ const BusinessUnderstandingNew = () => {
     setError(null)
 
     try {
-      await axios.post('/ai-projects/pmi-cpmai/link-business-understanding', null, {
-        params: {
-          initiative_id: selectedInitiative,
-          business_problem_text: businessProblem,
-          ai_pattern: selectedPattern,
-          ai_pattern_confidence: classifiedPattern?.confidence ?? 0,
-          ai_pattern_reasoning: classifiedPattern?.reasoning ?? '',
-          pattern_override: selectedPattern !== classifiedPattern.primary_pattern,
-          similar_initiatives_found: similarInitiatives.map(i => ({ id: i.initiative_id, score: i.similarity_score })),
-          ai_recommended_initiative_id: aiRecommendation?.recommended_initiative_id,
-          ai_recommendation_reasoning: aiRecommendation?.reasoning,
-          selected_use_case: selectedUseCase
-        }
+      // IMPORTANT:
+      // This endpoint mixes primitives (query params) with an optional JSON object
+      // (`selected_use_case`). Sending a dict via query params is unreliable.
+      // We send primitives as query params and the use case as JSON body.
+
+      const query = {
+        initiative_id: selectedInitiative,
+        business_problem_text: businessProblem,
+        ai_pattern: selectedPattern,
+        ai_pattern_confidence: classifiedPattern?.confidence ?? 0,
+        ai_pattern_reasoning: classifiedPattern?.reasoning ?? '',
+        pattern_override: selectedPattern !== classifiedPattern.primary_pattern,
+        similar_initiatives_found: similarInitiatives.map((i) => ({
+          id: i.initiative_id,
+          score: i.similarity_score,
+        })),
+        ai_recommended_initiative_id: aiRecommendation?.recommended_initiative_id,
+        ai_recommendation_reasoning: aiRecommendation?.reasoning,
+      }
+
+      // Debug logging
+      console.log('[handleFinalizeSelection] Sending request:', {
+        selectedUseCase,
+        query,
+        hasUseCase: !!selectedUseCase
       })
+
+      const response = await axios.post('/ai-projects/pmi-cpmai/link-business-understanding', selectedUseCase || null, {
+        params: query,
+      })
+
+      console.log('[handleFinalizeSelection] Response:', response.data)
 
       // Navigate to the initiative's business understanding page
       navigate(`/ai-projects/${selectedInitiative}/business-understanding`)
     } catch (err) {
+      console.error('[handleFinalizeSelection] Error:', err)
       setError(err.response?.data?.detail || 'Error linking business understanding')
     } finally {
       setLoading(false)

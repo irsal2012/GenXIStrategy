@@ -1,6 +1,30 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useParams, useNavigate } from 'react-router-dom'
+import {
+  Alert,
+  Avatar,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Container,
+  Divider,
+  Grid,
+  LinearProgress,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import CancelIcon from '@mui/icons-material/Cancel'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import DescriptionIcon from '@mui/icons-material/Description'
+import TaskAltIcon from '@mui/icons-material/TaskAlt'
 import {
   fetchBusinessUnderstanding,
   createBusinessUnderstanding,
@@ -15,6 +39,29 @@ const BusinessUnderstanding = () => {
   const navigate = useNavigate()
   const { businessUnderstanding, aiResults, loading, aiLoading } = useSelector((state) => state.aiProjects)
 
+  const continuationContext = useMemo(() => {
+    const problem = businessUnderstanding?.business_problem_text || ''
+    let useCase = businessUnderstanding?.selected_use_case || null
+
+    // Handle case where selected_use_case might be a JSON string
+    if (typeof useCase === 'string') {
+      try {
+        useCase = JSON.parse(useCase)
+      } catch (e) {
+        console.error('Failed to parse selected_use_case:', e)
+        useCase = null
+      }
+    }
+
+    return {
+      businessProblem: String(problem || '').trim(),
+      selectedUseCase: useCase && typeof useCase === 'object' ? useCase : null,
+    }
+  }, [
+    businessUnderstanding?.business_problem_text,
+    businessUnderstanding?.selected_use_case,
+  ])
+
   const [formData, setFormData] = useState({
     business_objectives: '',
     success_criteria: [],
@@ -27,6 +74,16 @@ const BusinessUnderstanding = () => {
   const [newDataSource, setNewDataSource] = useState({ name: '', description: '', available: false })
   const [newCompliance, setNewCompliance] = useState('')
   const [showFeasibility, setShowFeasibility] = useState(false)
+
+  const feasibility = aiResults?.feasibility
+
+  const goNoGo = useMemo(() => {
+    const value = businessUnderstanding?.go_no_go_decision
+    if (!value) return { label: 'PENDING', color: 'default' }
+    if (value === 'go') return { label: 'GO', color: 'success' }
+    if (value === 'no_go') return { label: 'NO GO', color: 'error' }
+    return { label: String(value).toUpperCase(), color: 'default' }
+  }, [businessUnderstanding?.go_no_go_decision])
 
   useEffect(() => {
     if (initiativeId) {
@@ -134,287 +191,572 @@ const BusinessUnderstanding = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Phase 1: Business Understanding</h1>
-            <p className="mt-2 text-gray-600">
-              Define business objectives, identify data sources, and assess project feasibility
-            </p>
-          </div>
-          <button
-            onClick={() => navigate(`/ai-projects/${initiativeId}`)}
-            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+    <Container maxWidth="lg" sx={{ py: 3 }}>
+      <Stack spacing={3}>
+        {/* Hero header */}
+        <Paper
+          elevation={0}
+          sx={(theme) => ({
+            p: { xs: 2.5, sm: 3 },
+            borderRadius: 3,
+            border: `1px solid ${theme.palette.divider}`,
+            background:
+              theme.palette.mode === 'dark'
+                ? 'linear-gradient(135deg, rgba(99,102,241,0.18) 0%, rgba(236,72,153,0.10) 45%, rgba(14,165,233,0.10) 100%)'
+                : 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(236,72,153,0.08) 45%, rgba(14,165,233,0.08) 100%)',
+          })}
+        >
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2.5} alignItems={{ sm: 'center' }}>
+            <Avatar
+              sx={(theme) => ({
+                width: 52,
+                height: 52,
+                bgcolor: theme.palette.primary.main,
+              })}
+            >
+              <AutoAwesomeIcon />
+            </Avatar>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h4" fontWeight={900} gutterBottom>
+                Phase 1: Business Understanding
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Define business objectives, identify data sources, and assess feasibility.
+              </Typography>
+            </Box>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
+              <Chip
+                icon={<InfoOutlinedIcon />}
+                label={`Initiative #${initiativeId}`}
+                variant="outlined"
+                color="primary"
+                sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}
+              />
+              <Button
+                onClick={() => navigate(`/ai-projects/${initiativeId}`)}
+                variant="outlined"
+                startIcon={<ArrowBackIcon />}
+              >
+                Back
+              </Button>
+            </Stack>
+          </Stack>
+          {(loading || aiLoading) && <LinearProgress sx={{ mt: 2 }} />}
+        </Paper>
+
+        {/* Continuation from previous steps */}
+        {(continuationContext.businessProblem || continuationContext.selectedUseCase) && (
+          <Paper
+            elevation={0}
+            sx={(t) => ({
+              p: { xs: 2.5, sm: 3 },
+              borderRadius: 3,
+              border: `1px solid ${t.palette.divider}`,
+              bgcolor: 'rgba(14, 165, 233, 0.06)',
+            })}
           >
-            ← Back to Dashboard
-          </button>
-        </div>
-      </div>
+            <Stack spacing={2}>
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <Avatar sx={{ bgcolor: 'info.main' }}>
+                  <InfoOutlinedIcon />
+                </Avatar>
+                <Box>
+                  <Typography variant="h6" fontWeight={900}>
+                    Continuation context
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Carry-forward details from the guided Business Understanding workflow.
+                  </Typography>
+                </Box>
+              </Stack>
 
-      {/* AI Feasibility Analysis */}
-      {showFeasibility && aiResults.feasibility && (
-        <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-6">
-          <h2 className="text-xl font-bold text-purple-900 mb-4">🤖 AI Feasibility Analysis</h2>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="text-sm text-purple-700 mb-1">Feasibility Score</div>
-                <div className="text-3xl font-bold text-purple-900">{aiResults.feasibility.feasibility_score}/100</div>
-              </div>
-              <div>
-                <div className="text-sm text-purple-700 mb-1">Recommendation</div>
-                <div className={`text-2xl font-bold ${
-                  aiResults.feasibility.recommendation === 'GO' ? 'text-green-600' :
-                  aiResults.feasibility.recommendation === 'NO_GO' ? 'text-red-600' :
-                  'text-yellow-600'
-                }`}>
-                  {aiResults.feasibility.recommendation}
-                </div>
-              </div>
-            </div>
-            
-            {aiResults.feasibility.data_availability_assessment && (
-              <div>
-                <h3 className="font-semibold text-purple-800 mb-2">Data Availability:</h3>
-                <p className="text-purple-700">{aiResults.feasibility.data_availability_assessment}</p>
-              </div>
-            )}
-            
-            {aiResults.feasibility.compliance_risks && aiResults.feasibility.compliance_risks.length > 0 && (
-              <div>
-                <h3 className="font-semibold text-purple-800 mb-2">Compliance Risks:</h3>
-                <ul className="list-disc list-inside space-y-1">
-                  {aiResults.feasibility.compliance_risks.map((risk, idx) => (
-                    <li key={idx} className="text-purple-700">{risk}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            
-            {aiResults.feasibility.estimated_timeline && (
-              <div className="text-sm text-purple-600">
-                <strong>Estimated Timeline:</strong> {aiResults.feasibility.estimated_timeline}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+              <Divider />
 
-      {/* Go/No-Go Decision */}
-      {businessUnderstanding && (
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Go/No-Go Decision</h2>
-          <div className="flex items-center space-x-4">
-            <div className="text-lg">
-              Current Status: 
-              <span className={`ml-2 font-bold ${
-                businessUnderstanding.go_no_go_decision === 'go' ? 'text-green-600' :
-                businessUnderstanding.go_no_go_decision === 'no_go' ? 'text-red-600' :
-                'text-gray-600'
-              }`}>
-                {businessUnderstanding.go_no_go_decision?.toUpperCase() || 'PENDING'}
-              </span>
-            </div>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => handleGoNoGoDecision('go')}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-              >
-                ✓ GO
-              </button>
-              <button
-                onClick={() => handleGoNoGoDecision('no_go')}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                ✗ NO GO
-              </button>
-            </div>
-          </div>
-          {businessUnderstanding.go_no_go_rationale && (
-            <div className="mt-4 p-4 bg-gray-50 rounded">
-              <strong>Rationale:</strong> {businessUnderstanding.go_no_go_rationale}
-            </div>
-          )}
-        </div>
-      )}
+              <Grid container spacing={2}>
+                {continuationContext.businessProblem && (
+                  <Grid item xs={12} md={continuationContext.selectedUseCase ? 6 : 12}>
+                    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2.5, height: '100%' }}>
+                      <Stack spacing={1}>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <DescriptionIcon fontSize="small" color="info" />
+                          <Typography variant="subtitle2" fontWeight={900}>
+                            Defined business problem
+                          </Typography>
+                        </Stack>
+                        <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
+                          {continuationContext.businessProblem}
+                        </Typography>
+                      </Stack>
+                    </Paper>
+                  </Grid>
+                )}
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Business Objectives */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Business Objectives</h2>
-          <textarea
-            value={formData.business_objectives}
-            onChange={(e) => setFormData({ ...formData, business_objectives: e.target.value })}
-            rows={4}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            placeholder="Describe the business objectives for this AI project..."
-            required
-          />
-        </div>
+                {continuationContext.selectedUseCase ? (
+                  <Grid item xs={12} md={6}>
+                    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2.5, height: '100%' }}>
+                      <Stack spacing={1.25}>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <TaskAltIcon fontSize="small" color="success" />
+                          <Typography variant="subtitle2" fontWeight={900}>
+                            Selected tactical use case
+                          </Typography>
+                        </Stack>
 
-        {/* Success Criteria */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Success Criteria</h2>
-          <div className="space-y-4">
-            {formData.success_criteria.map((criterion, index) => (
-              <div key={index} className="flex items-center space-x-2 p-3 bg-gray-50 rounded">
-                <div className="flex-1">
-                  <strong>{criterion.metric}:</strong> {criterion.target}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeCriterion(index)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                value={newCriterion.metric}
-                onChange={(e) => setNewCriterion({ ...newCriterion, metric: e.target.value })}
-                placeholder="Metric (e.g., Accuracy)"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
-              />
-              <input
-                type="text"
-                value={newCriterion.target}
-                onChange={(e) => setNewCriterion({ ...newCriterion, target: e.target.value })}
-                placeholder="Target (e.g., > 95%)"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
-              />
-              <button
-                type="button"
-                onClick={addCriterion}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Add
-              </button>
-            </div>
-          </div>
-        </div>
+                        <Stack spacing={0.5}>
+                          <Typography variant="subtitle1" fontWeight={900}>
+                            {continuationContext.selectedUseCase.title || 'Untitled use case'}
+                          </Typography>
+                          {continuationContext.selectedUseCase.description && (
+                            <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
+                              {continuationContext.selectedUseCase.description}
+                            </Typography>
+                          )}
+                        </Stack>
 
-        {/* Data Sources */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Data Sources</h2>
-          <div className="space-y-4">
-            {formData.data_sources_identified.map((source, index) => (
-              <div key={index} className="p-3 bg-gray-50 rounded">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="font-semibold">{source.name}</div>
-                    <div className="text-sm text-gray-600">{source.description}</div>
-                    <div className={`text-sm mt-1 ${source.available ? 'text-green-600' : 'text-red-600'}`}>
-                      {source.available ? '✓ Available' : '✗ Not Available'}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeDataSource(index)}
-                    className="text-red-600 hover:text-red-800"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            ))}
-            <div className="space-y-2">
-              <input
-                type="text"
-                value={newDataSource.name}
-                onChange={(e) => setNewDataSource({ ...newDataSource, name: e.target.value })}
-                placeholder="Data source name"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-              />
-              <input
-                type="text"
-                value={newDataSource.description}
-                onChange={(e) => setNewDataSource({ ...newDataSource, description: e.target.value })}
-                placeholder="Description"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-              />
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={newDataSource.available}
-                  onChange={(e) => setNewDataSource({ ...newDataSource, available: e.target.checked })}
-                  className="w-4 h-4"
+                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                          {continuationContext.selectedUseCase.timeline && (
+                            <Chip size="small" label={`Timeline: ${continuationContext.selectedUseCase.timeline}`} variant="outlined" />
+                          )}
+                          {continuationContext.selectedUseCase.implementation_complexity && (
+                            <Chip size="small" label={`Complexity: ${continuationContext.selectedUseCase.implementation_complexity}`} variant="outlined" />
+                          )}
+                        </Stack>
+                      </Stack>
+                    </Paper>
+                  </Grid>
+                ) : (
+                  <Grid item xs={12} md={6}>
+                    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2.5, height: '100%' }}>
+                      <Stack spacing={1.25}>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <TaskAltIcon fontSize="small" color="disabled" />
+                          <Typography variant="subtitle2" fontWeight={900}>
+                            Selected tactical use case
+                          </Typography>
+                        </Stack>
+
+                        <Alert severity="info" sx={{ mb: 0 }}>
+                          No tactical use case has been selected for this initiative yet.
+                        </Alert>
+
+                        <Typography variant="caption" color="text.secondary">
+                          To select one, go to the guided workflow and click “Confirm & Continue” on a tactical use case.
+                        </Typography>
+                      </Stack>
+                    </Paper>
+                  </Grid>
+                )}
+              </Grid>
+            </Stack>
+          </Paper>
+        )}
+
+        {/* AI Feasibility Analysis */}
+        {showFeasibility && feasibility && (
+          <Paper
+            elevation={0}
+            sx={(t) => ({
+              p: { xs: 2.5, sm: 3 },
+              borderRadius: 3,
+              border: `1px solid ${t.palette.divider}`,
+              bgcolor: 'rgba(124, 58, 237, 0.06)',
+            })}
+          >
+            <Stack spacing={2}>
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                  <AutoAwesomeIcon />
+                </Avatar>
+                <Box>
+                  <Typography variant="h6" fontWeight={900}>
+                    AI Feasibility Analysis
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    A quick, AI-assisted feasibility signal based on your inputs.
+                  </Typography>
+                </Box>
+              </Stack>
+
+              <Divider />
+
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Paper variant="outlined" sx={{ p: 2, borderRadius: 2.5 }}>
+                    <Typography variant="overline" color="text.secondary">
+                      Feasibility score
+                    </Typography>
+                    <Typography variant="h4" fontWeight={900}>
+                      {feasibility.feasibility_score}/100
+                    </Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Paper variant="outlined" sx={{ p: 2, borderRadius: 2.5 }}>
+                    <Typography variant="overline" color="text.secondary">
+                      Recommendation
+                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
+                      <Chip
+                        label={feasibility.recommendation}
+                        color={
+                          feasibility.recommendation === 'GO'
+                            ? 'success'
+                            : feasibility.recommendation === 'NO_GO'
+                              ? 'error'
+                              : 'warning'
+                        }
+                        variant="filled"
+                      />
+                    </Stack>
+                  </Paper>
+                </Grid>
+              </Grid>
+
+              {feasibility.data_availability_assessment && (
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={800} gutterBottom>
+                    Data availability
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {feasibility.data_availability_assessment}
+                  </Typography>
+                </Box>
+              )}
+
+              {Array.isArray(feasibility.compliance_risks) && feasibility.compliance_risks.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={800} gutterBottom>
+                    Compliance risks
+                  </Typography>
+                  <Stack spacing={0.75}>
+                    {feasibility.compliance_risks.map((risk, idx) => (
+                      <Typography key={idx} variant="body2" color="text.secondary">
+                        • {risk}
+                      </Typography>
+                    ))}
+                  </Stack>
+                </Box>
+              )}
+
+              {feasibility.estimated_timeline && (
+                <Alert severity="info">Estimated timeline: {feasibility.estimated_timeline}</Alert>
+              )}
+            </Stack>
+          </Paper>
+        )}
+
+        {/* Go/No-Go Decision */}
+        {businessUnderstanding && (
+          <Paper elevation={0} sx={(t) => ({ p: { xs: 2.5, sm: 3 }, borderRadius: 3, border: `1px solid ${t.palette.divider}` })}>
+            <Stack spacing={2}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={1.5}>
+                <Box>
+                  <Typography variant="h5" fontWeight={900}>
+                    Go/No-Go Decision
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Record the governance decision for this phase.
+                  </Typography>
+                </Box>
+                <Chip
+                  label={`Status: ${goNoGo.label}`}
+                  color={goNoGo.color}
+                  variant={goNoGo.color === 'default' ? 'outlined' : 'filled'}
+                  sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}
                 />
-                <label className="text-sm text-gray-700">Data is available</label>
-              </div>
-              <button
-                type="button"
-                onClick={addDataSource}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Add Data Source
-              </button>
-            </div>
-          </div>
-        </div>
+              </Stack>
 
-        {/* Compliance Requirements */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Compliance Requirements</h2>
-          <div className="space-y-4">
-            {formData.compliance_requirements.map((req, index) => (
-              <div key={index} className="flex items-center space-x-2 p-3 bg-gray-50 rounded">
-                <div className="flex-1">{req}</div>
-                <button
-                  type="button"
-                  onClick={() => removeCompliance(index)}
-                  className="text-red-600 hover:text-red-800"
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                <Button
+                  onClick={() => handleGoNoGoDecision('go')}
+                  variant="contained"
+                  color="success"
+                  startIcon={<CheckCircleIcon />}
+                  disabled={loading}
                 >
-                  Remove
-                </button>
-              </div>
-            ))}
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                value={newCompliance}
-                onChange={(e) => setNewCompliance(e.target.value)}
-                placeholder="Compliance requirement (e.g., GDPR, HIPAA)"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
-              />
-              <button
-                type="button"
-                onClick={addCompliance}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Add
-              </button>
-            </div>
-          </div>
-        </div>
+                  GO
+                </Button>
+                <Button
+                  onClick={() => handleGoNoGoDecision('no_go')}
+                  variant="contained"
+                  color="error"
+                  startIcon={<CancelIcon />}
+                  disabled={loading}
+                >
+                  NO GO
+                </Button>
+              </Stack>
 
-        {/* Actions */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <div className="flex space-x-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
-            >
-              {loading ? 'Saving...' : businessUnderstanding ? 'Update' : 'Create'}
-            </button>
-            <button
-              type="button"
-              onClick={handleAnalyzeFeasibility}
-              disabled={aiLoading || !formData.business_objectives}
-              className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
-            >
-              {aiLoading ? 'Analyzing...' : '🤖 Analyze Feasibility'}
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
+              {businessUnderstanding.go_no_go_rationale && (
+                <Alert severity="info">
+                  <strong>Rationale:</strong> {businessUnderstanding.go_no_go_rationale}
+                </Alert>
+              )}
+            </Stack>
+          </Paper>
+        )}
+
+        {/* Form */}
+        <Box component="form" onSubmit={handleSubmit}>
+          <Stack spacing={3}>
+            <Paper elevation={0} sx={(t) => ({ p: { xs: 2.5, sm: 3 }, borderRadius: 3, border: `1px solid ${t.palette.divider}` })}>
+              <Stack spacing={2}>
+                <Typography variant="h5" fontWeight={900}>
+                  Business Objectives
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Describe what success looks like, who benefits, and how value will be measured.
+                </Typography>
+                <TextField
+                  value={formData.business_objectives}
+                  onChange={(e) => setFormData({ ...formData, business_objectives: e.target.value })}
+                  multiline
+                  minRows={5}
+                  fullWidth
+                  placeholder="Describe the business objectives for this AI project…"
+                  required
+                />
+              </Stack>
+            </Paper>
+
+            <Paper elevation={0} sx={(t) => ({ p: { xs: 2.5, sm: 3 }, borderRadius: 3, border: `1px solid ${t.palette.divider}` })}>
+              <Stack spacing={2}>
+                <Typography variant="h5" fontWeight={900}>
+                  Success Criteria
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Add measurable outcomes (metric + target).
+                </Typography>
+
+                {formData.success_criteria.length === 0 ? (
+                  <Alert severity="info">No success criteria added yet.</Alert>
+                ) : (
+                  <Grid container spacing={2}>
+                    {formData.success_criteria.map((criterion, index) => (
+                      <Grid item xs={12} md={6} key={index}>
+                        <Card variant="outlined" sx={{ borderRadius: 3 }}>
+                          <CardContent>
+                            <Stack spacing={1.25}>
+                              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
+                                <Box sx={{ minWidth: 0 }}>
+                                  <Typography variant="subtitle1" fontWeight={900} noWrap>
+                                    {criterion.metric}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Target: {criterion.target}
+                                  </Typography>
+                                </Box>
+                                <Button color="error" onClick={() => removeCriterion(index)}>
+                                  Remove
+                                </Button>
+                              </Stack>
+                            </Stack>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                )}
+
+                <Divider />
+
+                <Grid container spacing={1.5} alignItems="center">
+                  <Grid item xs={12} sm={5}>
+                    <TextField
+                      label="Metric"
+                      value={newCriterion.metric}
+                      onChange={(e) => setNewCriterion({ ...newCriterion, metric: e.target.value })}
+                      placeholder="e.g., Accuracy"
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={5}>
+                    <TextField
+                      label="Target"
+                      value={newCriterion.target}
+                      onChange={(e) => setNewCriterion({ ...newCriterion, target: e.target.value })}
+                      placeholder="e.g., > 95%"
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={2}>
+                    <Button
+                      type="button"
+                      onClick={addCriterion}
+                      variant="contained"
+                      fullWidth
+                      disabled={!newCriterion.metric || !newCriterion.target}
+                    >
+                      Add
+                    </Button>
+                  </Grid>
+                </Grid>
+              </Stack>
+            </Paper>
+
+            <Paper elevation={0} sx={(t) => ({ p: { xs: 2.5, sm: 3 }, borderRadius: 3, border: `1px solid ${t.palette.divider}` })}>
+              <Stack spacing={2}>
+                <Typography variant="h5" fontWeight={900}>
+                  Data Sources
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Identify where training/serving data will come from and whether it’s available.
+                </Typography>
+
+                {formData.data_sources_identified.length === 0 ? (
+                  <Alert severity="info">No data sources added yet.</Alert>
+                ) : (
+                  <Grid container spacing={2}>
+                    {formData.data_sources_identified.map((source, index) => (
+                      <Grid item xs={12} md={6} key={index}>
+                        <Card variant="outlined" sx={{ borderRadius: 3 }}>
+                          <CardContent>
+                            <Stack spacing={1.25}>
+                              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
+                                <Box sx={{ minWidth: 0 }}>
+                                  <Typography variant="subtitle1" fontWeight={900} noWrap>
+                                    {source.name}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                                    {source.description || '—'}
+                                  </Typography>
+                                </Box>
+                                <Button color="error" onClick={() => removeDataSource(index)}>
+                                  Remove
+                                </Button>
+                              </Stack>
+
+                              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                <Chip
+                                  size="small"
+                                  label={source.available ? 'Available' : 'Not available'}
+                                  color={source.available ? 'success' : 'warning'}
+                                  variant="outlined"
+                                />
+                              </Stack>
+                            </Stack>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                )}
+
+                <Divider />
+
+                <Grid container spacing={1.5}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Data source name"
+                      value={newDataSource.name}
+                      onChange={(e) => setNewDataSource({ ...newDataSource, name: e.target.value })}
+                      placeholder="e.g., CRM database"
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Description"
+                      value={newDataSource.description}
+                      onChange={(e) => setNewDataSource({ ...newDataSource, description: e.target.value })}
+                      placeholder="What fields, frequency, owner, constraints…"
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }} justifyContent="space-between">
+                      <Button
+                        type="button"
+                        variant={newDataSource.available ? 'contained' : 'outlined'}
+                        color={newDataSource.available ? 'success' : 'inherit'}
+                        onClick={() => setNewDataSource({ ...newDataSource, available: !newDataSource.available })}
+                      >
+                        {newDataSource.available ? 'Data is available' : 'Mark as available'}
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={addDataSource}
+                        variant="contained"
+                        disabled={!newDataSource.name}
+                      >
+                        Add data source
+                      </Button>
+                    </Stack>
+                  </Grid>
+                </Grid>
+              </Stack>
+            </Paper>
+
+            <Paper elevation={0} sx={(t) => ({ p: { xs: 2.5, sm: 3 }, borderRadius: 3, border: `1px solid ${t.palette.divider}` })}>
+              <Stack spacing={2}>
+                <Typography variant="h5" fontWeight={900}>
+                  Compliance Requirements
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Capture regulatory, security, privacy, and policy obligations.
+                </Typography>
+
+                {formData.compliance_requirements.length === 0 ? (
+                  <Alert severity="info">No compliance requirements added yet.</Alert>
+                ) : (
+                  <Stack spacing={1}>
+                    {formData.compliance_requirements.map((req, index) => (
+                      <Paper key={index} variant="outlined" sx={{ p: 1.5, borderRadius: 2.5 }}>
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="space-between" alignItems={{ sm: 'center' }}>
+                          <Typography variant="body2">{req}</Typography>
+                          <Button color="error" onClick={() => removeCompliance(index)}>
+                            Remove
+                          </Button>
+                        </Stack>
+                      </Paper>
+                    ))}
+                  </Stack>
+                )}
+
+                <Divider />
+
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                  <TextField
+                    label="Add requirement"
+                    value={newCompliance}
+                    onChange={(e) => setNewCompliance(e.target.value)}
+                    placeholder="e.g., GDPR, HIPAA, SOC2, retention policy"
+                    fullWidth
+                  />
+                  <Button type="button" onClick={addCompliance} variant="contained" disabled={!newCompliance.trim()}>
+                    Add
+                  </Button>
+                </Stack>
+              </Stack>
+            </Paper>
+
+            <Paper elevation={0} sx={(t) => ({ p: { xs: 2.5, sm: 3 }, borderRadius: 3, border: `1px solid ${t.palette.divider}` })}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="flex-end">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  variant="contained"
+                  size="large"
+                >
+                  {loading ? 'Saving…' : businessUnderstanding ? 'Update' : 'Create'}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleAnalyzeFeasibility}
+                  disabled={aiLoading || !formData.business_objectives}
+                  variant="contained"
+                  color="secondary"
+                  size="large"
+                  startIcon={<AutoAwesomeIcon />}
+                >
+                  {aiLoading ? 'Analyzing…' : 'Analyze Feasibility'}
+                </Button>
+              </Stack>
+            </Paper>
+          </Stack>
+        </Box>
+      </Stack>
+    </Container>
   )
 }
 
