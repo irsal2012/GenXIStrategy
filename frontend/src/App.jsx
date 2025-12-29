@@ -26,6 +26,7 @@ import Analytics from './pages/Analytics'
 import AIProjectDashboard from './pages/AIProjectDashboard'
 import BusinessUnderstanding from './pages/BusinessUnderstanding'
 import BusinessUnderstandingNew from './pages/BusinessUnderstandingNew'
+import TacticalUseCaseSelection from './pages/TacticalUseCaseSelection'
 import DataUnderstanding from './pages/DataUnderstanding'
 import DataPreparation from './pages/DataPreparation'
 import ModelDevelopment from './pages/ModelDevelopment'
@@ -83,6 +84,7 @@ function App() {
           <Route path="reporting" element={<ExecutiveReporting />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="pmi-cpmai/business-understanding" element={<BusinessUnderstandingNew />} />
+          <Route path="pmi-cpmai/initiatives/:initiativeId/tactical-use-cases" element={<TacticalUseCaseSelection />} />
           <Route path="ai-projects/:initiativeId" element={<AIProjectDashboard />} />
           <Route path="ai-projects/:initiativeId/business-understanding" element={<BusinessUnderstanding />} />
           <Route path="ai-projects/:initiativeId/data-understanding" element={<DataUnderstanding />} />

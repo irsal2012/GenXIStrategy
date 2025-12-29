@@ -30,6 +30,15 @@ function Login() {
     }
   }, [isAuthenticated, navigate])
 
+  // If user is already authenticated (e.g., token is in localStorage)
+  // but Redux state isn't, bounce to dashboard to avoid appearing "stuck".
+  useEffect(() => {
+    const hasToken = !!localStorage.getItem('token')
+    if (!isAuthenticated && hasToken) {
+      navigate('/', { replace: true })
+    }
+  }, [isAuthenticated, navigate])
+
   const handleSubmit = async (values) => {
     await dispatch(login(values))
   }

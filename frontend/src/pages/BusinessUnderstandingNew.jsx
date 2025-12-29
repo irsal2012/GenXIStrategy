@@ -12,10 +12,6 @@ import {
   CardContent,
   Chip,
   Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Divider,
   Grid,
   LinearProgress,
@@ -26,6 +22,10 @@ import {
   Stepper,
   TextField,
   Typography,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
 } from '@mui/material'
 
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
@@ -122,51 +122,8 @@ const BusinessUnderstandingNew = () => {
   const [showNoMatchModal, setShowNoMatchModal] = useState(false)
   const [noMatchFeedback, setNoMatchFeedback] = useState('')
 
-  // Use case selection state
-  const [showUseCaseModal, setShowUseCaseModal] = useState(false)
-  const [generatedUseCases, setGeneratedUseCases] = useState([])
-  const [selectedUseCase, setSelectedUseCase] = useState(null)
+  // Use case selection state (now navigates to a page)
   const [loadingUseCases, setLoadingUseCases] = useState(false)
-  const [useCaseError, setUseCaseError] = useState(null)
-
-  // Normalize backend responses defensively (supports multiple shapes)
-  const normalizeUseCases = (payload) => {
-    // Accept either:
-    // - axios response: { data: { success, data: { use_cases } } }
-    // - response.data directly: { success, data: { use_cases } }
-    const container = payload?.data?.data ? payload.data : payload
-
-    const raw = container?.data?.use_cases ?? container?.data?.useCases ?? container?.use_cases ?? container?.useCases ?? []
-    const list = Array.isArray(raw) ? raw : []
-
-    return list
-      .map((uc) => {
-        if (!uc || typeof uc !== 'object') return null
-        const expectedOutcomes = Array.isArray(uc.expected_outcomes)
-          ? uc.expected_outcomes
-          : Array.isArray(uc.expectedOutcomes)
-            ? uc.expectedOutcomes
-            : []
-        const successCriteria = Array.isArray(uc.success_criteria)
-          ? uc.success_criteria
-          : Array.isArray(uc.successCriteria)
-            ? uc.successCriteria
-            : []
-
-        const alignmentScore = uc.alignment_score ?? uc.alignmentScore
-
-        return {
-          title: uc.title ?? 'Untitled use case',
-          description: uc.description ?? '',
-          expected_outcomes: expectedOutcomes,
-          success_criteria: successCriteria,
-          timeline: uc.timeline ?? uc.estimated_timeline ?? uc.estimatedTimeline ?? 'TBD',
-          implementation_complexity: uc.implementation_complexity ?? uc.implementationComplexity ?? uc.complexity ?? 'TBD',
-          alignment_score: typeof alignmentScore === 'number' ? alignmentScore : Number(alignmentScore) || null,
-        }
-      })
-      .filter(Boolean)
-  }
 
   // Loading states
   const [loading, setLoading] = useState(false)
@@ -336,7 +293,7 @@ const BusinessUnderstandingNew = () => {
     }
   }
 
-  // NEW: Generate tactical use cases when user confirms selection
+  // Navigate to the Tactical Use Case selection page.
   const handleConfirmSelection = async () => {
     if (!selectedInitiative) {
       setError('Please select an initiative first.')
@@ -344,166 +301,23 @@ const BusinessUnderstandingNew = () => {
     }
 
     setLoadingUseCases(true)
-    setUseCaseError(null)
-    setGeneratedUseCases([])
-    setSelectedUseCase(null)
     setError(null) // Clear any previous errors
 
     try {
-      // Generate tactical use cases
-      // IMPORTANT: backend expects `business_problem` (not business_problem_text)
-      // and most endpoints in this workflow are `Query` parameters.
-      // We also defensively URL-encode via axios params.
-      const response = await axios.post(
-        '/ai-projects/pmi-cpmai/generate-tactical-use-cases',
-        null,
-        {
-          params: {
-            business_problem: businessProblem,
-            ai_pattern: selectedPattern,
-            initiative_id: selectedInitiative,
-          },
-        }
-      )
-
-      // Surface backend failures explicitly rather than falling through
-      // to a generic “Error generating use cases”.
-      const body = response?.data
-      if (body?.success === false) {
-        const msg = body?.error || body?.message || 'Failed to generate use cases'
-        setUseCaseError(msg)
-        setError(msg)
-        setShowUseCaseModal(true)
-        return
-      }
-
-      // Backend returns {success: bool, data: {use_cases: [...]}, ...}
-      // Our normalizer supports multiple shapes.
-      const normalized = normalizeUseCases(response)
-      
-      if (normalized.length === 0) {
-        const msg = 'Use cases were generated but returned empty. Please try again.'
-        setUseCaseError(msg)
-        setError(msg)
-        setShowUseCaseModal(true)
-        return
-      }
-
-      setGeneratedUseCases(normalized)
-      setShowUseCaseModal(true)
-    } catch (err) {
-      // Dev-only diagnostics: helps pinpoint why use case generation fails in the field.
-      // eslint-disable-next-line no-console
-      console.error('[generate-tactical-use-cases] failed', {
-        message: err?.message,
-        status: err?.response?.status,
-        data: err?.response?.data,
-        params: {
-          business_problem: businessProblem,
-          ai_pattern: selectedPattern,
-          initiative_id: selectedInitiative,
+      navigate(`/pmi-cpmai/initiatives/${selectedInitiative}/tactical-use-cases`, {
+        state: {
+          from: '/pmi-cpmai/business-understanding',
+          businessProblem,
+          selectedPattern,
+          classifiedPattern,
+          similarInitiatives,
+          aiRecommendation,
         },
       })
-
-      // Prefer server-provided error message.
-      const status = err.response?.status
-      const serverMsg = err.response?.data?.detail || err.response?.data?.message || err.response?.data?.error
-      // Ensure we never regress to an unhelpful generic message.
-      // If there's no serverMsg, include http status and axios error.message.
-      const msg = serverMsg || (
-        status === 401
-          ? 'Your session expired. Please sign in again.'
-          : status === 404
-            ? 'Selected initiative was not found. Please refresh and try again.'
-            : status === 422
-              ? 'Invalid request. Please review your inputs and try again.'
-              : `Error generating use cases${status ? ` (HTTP ${status})` : ''}${err?.message ? `: ${err.message}` : ''}`
-      )
-
-      setUseCaseError(msg)
-      setError(msg)
-      setShowUseCaseModal(true) // Show modal even on error so user can see the error message
+    } catch (err) {
+      setError(err.response?.data?.detail || err?.message || 'Error preparing tactical use cases')
     } finally {
       setLoadingUseCases(false)
-    }
-  }
-
-  // NEW: Finalize selection with optional use case
-  const handleFinalizeSelection = async () => {
-    if (!selectedInitiative) {
-      setError('Please select an initiative first.')
-      return
-    }
-
-    if (!businessProblem || businessProblem.trim().length < minChars) {
-      setError(`Please describe your business problem first (minimum ${minChars} characters).`)
-      return
-    }
-
-    if (!selectedPattern) {
-      setError('Please select an AI pattern first.')
-      return
-    }
-
-    if (!classifiedPattern) {
-      setError('Missing AI pattern classification details. Please re-run "Analyze & classify".')
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-
-    try {
-      // IMPORTANT:
-      // This endpoint mixes primitives (query params) with an optional JSON object
-      // (`selected_use_case`). Sending a dict via query params is unreliable.
-      // We send primitives as query params and the use case as JSON body.
-
-      const query = {
-        initiative_id: selectedInitiative,
-        business_problem_text: businessProblem,
-        ai_pattern: selectedPattern,
-        ai_pattern_confidence: classifiedPattern?.confidence ?? 0,
-        ai_pattern_reasoning: classifiedPattern?.reasoning ?? '',
-        pattern_override: selectedPattern !== classifiedPattern.primary_pattern,
-        similar_initiatives_found: similarInitiatives.map((i) => ({
-          id: i.initiative_id,
-          score: i.similarity_score,
-        })),
-        ai_recommended_initiative_id: aiRecommendation?.recommended_initiative_id,
-        ai_recommendation_reasoning: aiRecommendation?.reasoning,
-      }
-
-      // Debug logging
-      console.log('[handleFinalizeSelection] Sending request:', {
-        selectedUseCase,
-        query,
-        hasUseCase: !!selectedUseCase
-      })
-
-      const response = await axios.post('/ai-projects/pmi-cpmai/link-business-understanding', selectedUseCase || null, {
-        params: query,
-      })
-
-      console.log('[handleFinalizeSelection] Response:', response.data)
-
-      // Close the modal (if still open)
-      setShowUseCaseModal(false)
-
-      // Next step after selecting tactical use case: continue PMI-CPMAI workflow
-      // to the initiative's Business Understanding page.
-      // NOTE: We pass the selected use case via navigation state so the next
-      // page can immediately render it even before refetch.
-      navigate(`/ai-projects/${selectedInitiative}/business-understanding`, {
-        state: {
-          selected_use_case: selectedUseCase || null,
-        },
-      })
-    } catch (err) {
-      console.error('[handleFinalizeSelection] Error:', err)
-      setError(err.response?.data?.detail || 'Error linking business understanding')
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -1013,139 +827,6 @@ const BusinessUnderstandingNew = () => {
             </Paper>
           </Stack>
         )}
-
-        {/* Use Case Selection Dialog */}
-        <Dialog open={showUseCaseModal} onClose={() => setShowUseCaseModal(false)} fullWidth maxWidth="md">
-          <DialogTitle>
-            <Stack direction="row" spacing={2} alignItems="center">
-              <Avatar sx={{ bgcolor: 'primary.main' }}>
-                <AutoAwesomeIcon />
-              </Avatar>
-              <Box>
-                <Typography variant="h6" fontWeight={800}>
-                  Select a Tactical Use Case
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Choose the specific implementation that best matches your needs
-                </Typography>
-              </Box>
-            </Stack>
-          </DialogTitle>
-          
-          <DialogContent>
-            <Stack spacing={2} sx={{ mt: 1 }}>
-              {useCaseError && <Alert severity="error">{useCaseError}</Alert>}
-
-              {!useCaseError && generatedUseCases.length === 0 && (
-                <Alert severity="info">No use cases to display yet.</Alert>
-              )}
-              
-              {generatedUseCases.map((useCase, index) => {
-                const isSelected = selectedUseCase?.title === useCase.title
-                
-                return (
-                  <Card
-                    key={index}
-                    variant="outlined"
-                    sx={{
-                      borderColor: isSelected ? 'primary.main' : 'divider',
-                      boxShadow: isSelected ? '0 0 0 2px rgba(99,102,241,0.2)' : 'none',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onClick={() => setSelectedUseCase(useCase)}
-                  >
-                    <CardContent>
-                      <Stack spacing={1.5}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                          <Typography variant="h6" fontWeight={800}>
-                            {useCase.title}
-                          </Typography>
-                          <Chip 
-                            label={useCase.alignment_score != null ? `${useCase.alignment_score}% match` : 'Match'}
-                            color={useCase.alignment_score != null && useCase.alignment_score >= 80 ? 'success' : 'primary'}
-                            size="small"
-                          />
-                        </Stack>
-                        
-                        <Typography variant="body2" color="text.secondary">
-                          {useCase.description}
-                        </Typography>
-                        
-                        <Box>
-                          <Typography variant="subtitle2" fontWeight={700} gutterBottom>
-                            Expected Outcomes
-                          </Typography>
-                          <Stack spacing={0.5}>
-                            {(useCase.expected_outcomes || []).map((outcome, idx) => (
-                              <Typography key={idx} variant="body2" color="text.secondary">
-                                • {outcome}
-                              </Typography>
-                            ))}
-                          </Stack>
-                        </Box>
-                        
-                        {useCase.success_criteria && useCase.success_criteria.length > 0 && (
-                          <Box>
-                            <Typography variant="subtitle2" fontWeight={700} gutterBottom>
-                              Success Criteria
-                            </Typography>
-                            <Stack spacing={0.5}>
-                              {useCase.success_criteria.map((criterion, idx) => (
-                                <Typography key={idx} variant="body2" color="text.secondary">
-                                  • {criterion}
-                                </Typography>
-                              ))}
-                            </Stack>
-                          </Box>
-                        )}
-                        
-                        <Stack direction="row" spacing={1} flexWrap="wrap">
-                          <Chip size="small" label={`Timeline: ${useCase.timeline}`} variant="outlined" />
-                          <Chip size="small" label={`Complexity: ${useCase.implementation_complexity}`} variant="outlined" />
-                        </Stack>
-                        
-                        {isSelected && (
-                          <Stack direction="row" alignItems="center" spacing={1}>
-                            <CheckCircleIcon fontSize="small" color="primary" />
-                            <Typography variant="body2" color="primary.main" fontWeight={700}>
-                              Selected
-                            </Typography>
-                          </Stack>
-                        )}
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </Stack>
-          </DialogContent>
-          
-          <DialogActions>
-            <Button onClick={() => setShowUseCaseModal(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={() => {
-                setSelectedUseCase(null)
-                handleFinalizeSelection()
-              }}
-              variant="outlined"
-            >
-              Skip this step
-            </Button>
-            <Button 
-              onClick={() => {
-                handleFinalizeSelection()
-              }}
-              variant="contained"
-              disabled={!selectedUseCase}
-              startIcon={<LinkIcon />}
-            >
-              Confirm & Continue
-            </Button>
-          </DialogActions>
-        </Dialog>
 
         {/* Feedback dialog */}
         <Dialog open={showNoMatchModal} onClose={() => setShowNoMatchModal(false)} fullWidth maxWidth="sm">
