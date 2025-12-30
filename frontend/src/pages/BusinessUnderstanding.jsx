@@ -39,6 +39,16 @@ const BusinessUnderstanding = () => {
   const navigate = useNavigate()
   const { businessUnderstanding, aiResults, loading, aiLoading } = useSelector((state) => state.aiProjects)
 
+  // If we just came from the guided PMI-CPMAI flow, the selected use case is passed
+  // via navigation state. Persist it immediately so the continuation context is never blank
+  // (e.g. if the link-business-understanding call succeeded but fetching is delayed,
+  // or if a user refreshes right after navigating).
+  const navigationSelectedUseCase = useMemo(() => {
+    const nav = window?.history?.state?.usr
+    const candidate = nav?.selected_use_case
+    return candidate && typeof candidate === 'object' ? candidate : null
+  }, [])
+
   const continuationContext = useMemo(() => {
     const problem = businessUnderstanding?.business_problem_text || ''
     let useCase = businessUnderstanding?.selected_use_case || null
@@ -55,11 +65,13 @@ const BusinessUnderstanding = () => {
 
     return {
       businessProblem: String(problem || '').trim(),
-      selectedUseCase: useCase && typeof useCase === 'object' ? useCase : null,
+      selectedUseCase:
+        (useCase && typeof useCase === 'object' ? useCase : null) || navigationSelectedUseCase,
     }
   }, [
     businessUnderstanding?.business_problem_text,
     businessUnderstanding?.selected_use_case,
+    navigationSelectedUseCase,
   ])
 
   const [formData, setFormData] = useState({
