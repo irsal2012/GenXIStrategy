@@ -25,6 +25,11 @@ import CancelIcon from '@mui/icons-material/Cancel'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import DescriptionIcon from '@mui/icons-material/Description'
 import TaskAltIcon from '@mui/icons-material/TaskAlt'
+import FlagIcon from '@mui/icons-material/Flag'
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
+import TrendingUpIcon from '@mui/icons-material/TrendingUp'
+import NumbersIcon from '@mui/icons-material/Numbers'
+import axiosInstance from '../api/axios'
 import {
   fetchBusinessUnderstanding,
   createBusinessUnderstanding,
@@ -32,6 +37,33 @@ import {
   recordGoNoGoDecision,
   analyzeFeasibility
 } from '../store/slices/aiProjectsSlice'
+
+const formatPriority = (priority) => {
+  if (!priority) return '—'
+  const p = String(priority).toLowerCase()
+  return p.charAt(0).toUpperCase() + p.slice(1)
+}
+
+const formatCurrencyK = (value) => {
+  if (value == null || value === '') return '—'
+  const num = Number(value)
+  if (Number.isNaN(num)) return '—'
+  return `$${Math.round(num)}K`
+}
+
+const formatPercent = (value) => {
+  if (value == null || value === '') return '—'
+  const num = Number(value)
+  if (Number.isNaN(num)) return '—'
+  return `${Math.round(num)}%`
+}
+
+const truncate = (text, max = 220) => {
+  if (!text) return ''
+  const str = String(text)
+  if (str.length <= max) return str
+  return `${str.slice(0, max)}…`
+}
 
 const BusinessUnderstanding = () => {
   const { initiativeId } = useParams()
@@ -67,11 +99,13 @@ const BusinessUnderstanding = () => {
       businessProblem: String(problem || '').trim(),
       selectedUseCase:
         (useCase && typeof useCase === 'object' ? useCase : null) || navigationSelectedUseCase,
+      selectedInitiativeId: initiativeId ? Number(initiativeId) : null,
     }
   }, [
     businessUnderstanding?.business_problem_text,
     businessUnderstanding?.selected_use_case,
     navigationSelectedUseCase,
+    initiativeId,
   ])
 
   const [formData, setFormData] = useState({
@@ -86,6 +120,11 @@ const BusinessUnderstanding = () => {
   const [newDataSource, setNewDataSource] = useState({ name: '', description: '', available: false })
   const [newCompliance, setNewCompliance] = useState('')
   const [showFeasibility, setShowFeasibility] = useState(false)
+
+  // Selected initiative details for the continuation context.
+  // We fetch minimal details from /initiatives/:id.
+  const [selectedInitiative, setSelectedInitiative] = useState(null)
+  const [selectedInitiativeLoading, setSelectedInitiativeLoading] = useState(false)
 
   const feasibility = aiResults?.feasibility
 
@@ -102,6 +141,24 @@ const BusinessUnderstanding = () => {
       dispatch(fetchBusinessUnderstanding(initiativeId))
     }
   }, [dispatch, initiativeId])
+
+  useEffect(() => {
+    const run = async () => {
+      if (!initiativeId) return
+      try {
+        setSelectedInitiativeLoading(true)
+        const res = await axiosInstance.get(`/initiatives/${initiativeId}`)
+        setSelectedInitiative(res.data)
+      } catch (e) {
+        // Non-fatal; we can still render the id-based card.
+        setSelectedInitiative(null)
+      } finally {
+        setSelectedInitiativeLoading(false)
+      }
+    }
+
+    run()
+  }, [initiativeId])
 
   useEffect(() => {
     if (businessUnderstanding) {
@@ -286,7 +343,11 @@ const BusinessUnderstanding = () => {
 
               <Grid container spacing={2}>
                 {continuationContext.businessProblem && (
-                  <Grid item xs={12} md={continuationContext.selectedUseCase ? 6 : 12}>
+                  <Grid
+                    item
+                    xs={12}
+                    md={continuationContext.selectedUseCase ? 4 : 6}
+                  >
                     <Paper variant="outlined" sx={{ p: 2, borderRadius: 2.5, height: '100%' }}>
                       <Stack spacing={1}>
                         <Stack direction="row" spacing={1} alignItems="center">
@@ -303,8 +364,83 @@ const BusinessUnderstanding = () => {
                   </Grid>
                 )}
 
+                {continuationContext.selectedInitiativeId != null && (
+                  <Grid item xs={12} md={continuationContext.selectedUseCase ? 4 : 6}>
+                    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2.5, height: '100%' }}>
+                      <Stack spacing={1.25}>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <FlagIcon fontSize="small" color="primary" />
+                          <Typography variant="subtitle2" fontWeight={900}>
+                            Selected initiative
+                          </Typography>
+                        </Stack>
+
+                        {selectedInitiative ? (
+                          <Stack spacing={0.5}>
+                            <Typography variant="subtitle1" fontWeight={900}>
+                              {selectedInitiative.title || `Initiative #${continuationContext.selectedInitiativeId}`}
+                            </Typography>
+                            {selectedInitiative.description && (
+                              <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
+                                {selectedInitiative.description}
+                              </Typography>
+                            )}
+
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                              <Chip
+                                size="small"
+                                icon={<NumbersIcon />}
+                                label={`ID: ${continuationContext.selectedInitiativeId}`}
+                                variant="outlined"
+                              />
+                              <Chip
+                                size="small"
+                                label={`Priority: ${formatPriority(selectedInitiative.priority)}`}
+                                variant="outlined"
+                              />
+                              <Chip
+                                size="small"
+                                icon={<AttachMoneyIcon />}
+                                label={`Budget: ${formatCurrencyK(selectedInitiative.budget_allocated)}`}
+                                variant="outlined"
+                              />
+                              <Chip
+                                size="small"
+                                icon={<TrendingUpIcon />}
+                                label={`Expected ROI: ${formatPercent(selectedInitiative.expected_roi)}`}
+                                variant="outlined"
+                              />
+                              <Chip
+                                size="small"
+                                label={`Business Value: ${selectedInitiative.business_value_score ?? '—'}/10`}
+                                variant="outlined"
+                              />
+                            </Stack>
+                          </Stack>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            {selectedInitiativeLoading
+                              ? 'Loading initiative details…'
+                              : `Initiative #${continuationContext.selectedInitiativeId}`}
+                          </Typography>
+                        )}
+
+                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                          <Chip
+                            size="small"
+                            label="View initiative"
+                            variant="outlined"
+                            clickable
+                            onClick={() => navigate(`/ai-projects/${continuationContext.selectedInitiativeId}`)}
+                          />
+                        </Stack>
+                      </Stack>
+                    </Paper>
+                  </Grid>
+                )}
+
                 {continuationContext.selectedUseCase ? (
-                  <Grid item xs={12} md={6}>
+                  <Grid item xs={12} md={4}>
                     <Paper variant="outlined" sx={{ p: 2, borderRadius: 2.5, height: '100%' }}>
                       <Stack spacing={1.25}>
                         <Stack direction="row" spacing={1} alignItems="center">
@@ -337,7 +473,7 @@ const BusinessUnderstanding = () => {
                     </Paper>
                   </Grid>
                 ) : (
-                  <Grid item xs={12} md={6}>
+                  <Grid item xs={12} md={4}>
                     <Paper variant="outlined" sx={{ p: 2, borderRadius: 2.5, height: '100%' }}>
                       <Stack spacing={1.25}>
                         <Stack direction="row" spacing={1} alignItems="center">
