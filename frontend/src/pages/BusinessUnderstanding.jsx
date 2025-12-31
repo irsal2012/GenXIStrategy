@@ -129,7 +129,6 @@ const BusinessUnderstanding = () => {
   ])
 
   const [formData, setFormData] = useState({
-    business_objectives: '',
     success_criteria: [],
     stakeholder_requirements: {},
     data_sources_identified: [],
@@ -189,7 +188,6 @@ const BusinessUnderstanding = () => {
   useEffect(() => {
     if (businessUnderstanding) {
       setFormData({
-        business_objectives: businessUnderstanding.business_objectives || '',
         success_criteria: businessUnderstanding.success_criteria || [],
         stakeholder_requirements: businessUnderstanding.stakeholder_requirements || {},
         data_sources_identified: businessUnderstanding.data_sources_identified || [],
@@ -233,7 +231,6 @@ const BusinessUnderstanding = () => {
   const handleAnalyzeFeasibility = () => {
     dispatch(analyzeFeasibility({
       initiative_id: parseInt(initiativeId),
-      business_objectives: formData.business_objectives,
       data_sources: formData.data_sources_identified,
       compliance_requirements: formData.compliance_requirements
     }))
@@ -248,7 +245,6 @@ const BusinessUnderstanding = () => {
       prefillAiGoNoGo({
         initiative_id: parseInt(initiativeId),
         continuation_context: continuationContext,
-        business_objectives: formData.business_objectives,
         data_sources: formData.data_sources_identified,
         compliance_requirements: formData.compliance_requirements,
       })
@@ -850,7 +846,9 @@ const BusinessUnderstanding = () => {
         </Paper>
 
         {/* Go/No-Go Decision */}
-        {businessUnderstanding && (
+        {/* Hide this legacy/manual decision card when a decision already exists.
+            The CPMAI flow already captures Go/No-Go as part of the AI Go/No-Go gate. */}
+        {businessUnderstanding && !businessUnderstanding?.go_no_go_decision && (
           <Paper elevation={0} sx={(t) => ({ p: { xs: 2.5, sm: 3 }, borderRadius: 3, border: `1px solid ${t.palette.divider}` })}>
             <Stack spacing={2}>
               <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={1.5}>
@@ -903,26 +901,6 @@ const BusinessUnderstanding = () => {
         {/* Form */}
         <Box component="form" onSubmit={handleSubmit}>
           <Stack spacing={3}>
-            <Paper elevation={0} sx={(t) => ({ p: { xs: 2.5, sm: 3 }, borderRadius: 3, border: `1px solid ${t.palette.divider}` })}>
-              <Stack spacing={2}>
-                <Typography variant="h5" fontWeight={900}>
-                  Business Objectives
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Describe what success looks like, who benefits, and how value will be measured.
-                </Typography>
-                <TextField
-                  value={formData.business_objectives}
-                  onChange={(e) => setFormData({ ...formData, business_objectives: e.target.value })}
-                  multiline
-                  minRows={5}
-                  fullWidth
-                  placeholder="Describe the business objectives for this AI project…"
-                  required
-                />
-              </Stack>
-            </Paper>
-
             <Paper elevation={0} sx={(t) => ({ p: { xs: 2.5, sm: 3 }, borderRadius: 3, border: `1px solid ${t.palette.divider}` })}>
               <Stack spacing={2}>
                 <Typography variant="h5" fontWeight={900}>
@@ -1147,7 +1125,7 @@ const BusinessUnderstanding = () => {
                 <Button
                   type="button"
                   onClick={handleAnalyzeFeasibility}
-                  disabled={aiLoading || !formData.business_objectives}
+                  disabled={aiLoading}
                   variant="contained"
                   color="secondary"
                   size="large"
