@@ -119,6 +119,10 @@ class BusinessUnderstanding(Base):
     
     # AI insights
     ai_feasibility_analysis = Column(JSON, nullable=True)
+
+    # AI Go/No-Go (9-factor gate)
+    # Stored as JSON to allow schema evolution without migrations for every rubric change.
+    ai_go_no_go_assessment = Column(JSON, nullable=True)
     
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)

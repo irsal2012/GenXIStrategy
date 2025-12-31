@@ -17,6 +17,7 @@ import {
   Stack,
   TextField,
   Typography,
+  Snackbar,
 } from '@mui/material'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
@@ -29,14 +30,33 @@ import FlagIcon from '@mui/icons-material/Flag'
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import NumbersIcon from '@mui/icons-material/Numbers'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import axiosInstance from '../api/axios'
+import TacticalUseCaseDetailDialog from '../components/TacticalUseCaseDetailDialog'
 import {
   fetchBusinessUnderstanding,
   createBusinessUnderstanding,
   updateBusinessUnderstanding,
   recordGoNoGoDecision,
-  analyzeFeasibility
+  analyzeFeasibility,
+  prefillAiGoNoGo,
+  saveAiGoNoGoAssessment,
+  clearError,
 } from '../store/slices/aiProjectsSlice'
+
+const GO_NO_GO_COLORS = {
+  go: 'success',
+  cautious: 'warning',
+  risk: 'error',
+}
+
+const prettyGoNoGo = (value) => {
+  const v = String(value || '').toLowerCase()
+  if (v === 'go') return 'Go'
+  if (v === 'cautious') return 'Cautious'
+  if (v === 'risk') return 'Risk'
+  return value ? String(value) : '—'
+}
 
 const formatPriority = (priority) => {
   if (!priority) return '—'
@@ -69,7 +89,7 @@ const BusinessUnderstanding = () => {
   const { initiativeId } = useParams()
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const { businessUnderstanding, aiResults, loading, aiLoading } = useSelector((state) => state.aiProjects)
+  const { businessUnderstanding, aiResults, loading, aiLoading, error } = useSelector((state) => state.aiProjects)
 
   // If we just came from the guided PMI-CPMAI flow, the selected use case is passed
   // via navigation state. Persist it immediately so the continuation context is never blank
@@ -120,6 +140,7 @@ const BusinessUnderstanding = () => {
   const [newDataSource, setNewDataSource] = useState({ name: '', description: '', available: false })
   const [newCompliance, setNewCompliance] = useState('')
   const [showFeasibility, setShowFeasibility] = useState(false)
+  const [showUseCaseDialog, setShowUseCaseDialog] = useState(false)
 
   // Selected initiative details for the continuation context.
   // We fetch minimal details from /initiatives/:id.
@@ -127,6 +148,11 @@ const BusinessUnderstanding = () => {
   const [selectedInitiativeLoading, setSelectedInitiativeLoading] = useState(false)
 
   const feasibility = aiResults?.feasibility
+  const aiGoNoGo = aiResults?.goNoGo
+
+  const [goNoGoAssessment, setGoNoGoAssessment] = useState(null)
+
+  const [toast, setToast] = useState({ open: false, message: '', severity: 'info' })
 
   const goNoGo = useMemo(() => {
     const value = businessUnderstanding?.go_no_go_decision
@@ -169,8 +195,26 @@ const BusinessUnderstanding = () => {
         data_sources_identified: businessUnderstanding.data_sources_identified || [],
         compliance_requirements: businessUnderstanding.compliance_requirements || []
       })
+
+      // hydrate go/no-go assessment from DB if present
+      if (businessUnderstanding.ai_go_no_go_assessment) {
+        setGoNoGoAssessment(businessUnderstanding.ai_go_no_go_assessment)
+      }
     }
   }, [businessUnderstanding])
+
+  useEffect(() => {
+    if (aiGoNoGo?.success && aiGoNoGo?.data) {
+      setGoNoGoAssessment(aiGoNoGo.data)
+      setToast({ open: true, message: 'AI Go/No-Go assessment generated.', severity: 'success' })
+    }
+  }, [aiGoNoGo])
+
+  useEffect(() => {
+    if (aiGoNoGo && aiGoNoGo.success === false) {
+      setToast({ open: true, message: aiGoNoGo.error || 'Failed to generate AI Go/No-Go assessment.', severity: 'error' })
+    }
+  }, [aiGoNoGo])
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -194,6 +238,50 @@ const BusinessUnderstanding = () => {
       compliance_requirements: formData.compliance_requirements
     }))
     setShowFeasibility(true)
+  }
+
+  const handlePrefillGoNoGo = () => {
+    if (!initiativeId) return
+    // Clear any previous banner error so users can see fresh state.
+    dispatch(clearError())
+    dispatch(
+      prefillAiGoNoGo({
+        initiative_id: parseInt(initiativeId),
+        continuation_context: continuationContext,
+        business_objectives: formData.business_objectives,
+        data_sources: formData.data_sources_identified,
+        compliance_requirements: formData.compliance_requirements,
+      })
+    )
+  }
+
+  const handleUpdateFactor = (factorId, updates) => {
+    setGoNoGoAssessment((prev) => {
+      if (!prev || !Array.isArray(prev.factors)) return prev
+      const next = {
+        ...prev,
+        factors: prev.factors.map((f) =>
+          f?.id === factorId
+            ? {
+                ...f,
+                ...updates,
+                user_override: true,
+              }
+            : f
+        ),
+      }
+      return next
+    })
+  }
+
+  const handleSaveGoNoGoAssessment = () => {
+    if (!businessUnderstanding?.id || !goNoGoAssessment) return
+    dispatch(
+      saveAiGoNoGoAssessment({
+        businessUnderstandingId: businessUnderstanding.id,
+        ai_go_no_go_assessment: goNoGoAssessment,
+      })
+    )
   }
 
   const handleGoNoGoDecision = (decision) => {
@@ -469,6 +557,17 @@ const BusinessUnderstanding = () => {
                             <Chip size="small" label={`Complexity: ${continuationContext.selectedUseCase.implementation_complexity}`} variant="outlined" />
                           )}
                         </Stack>
+
+                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                          <Chip
+                            size="small"
+                            icon={<VisibilityIcon />}
+                            label="View use case"
+                            variant="outlined"
+                            clickable
+                            onClick={() => setShowUseCaseDialog(true)}
+                          />
+                        </Stack>
                       </Stack>
                     </Paper>
                   </Grid>
@@ -592,6 +691,163 @@ const BusinessUnderstanding = () => {
             </Stack>
           </Paper>
         )}
+
+        {/* AI Go/No-Go (9-factor) */}
+        <Paper
+          elevation={0}
+          sx={(t) => ({
+            p: { xs: 2.5, sm: 3 },
+            borderRadius: 3,
+            border: `1px solid ${t.palette.divider}`,
+            bgcolor: 'rgba(234, 179, 8, 0.06)',
+          })}
+        >
+          <Stack spacing={2}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between">
+              <Box>
+                <Typography variant="h5" fontWeight={900}>
+                  AI Go/No-Go (9-factor gate)
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  AI-prefilled, editable signal based on the CPMAI Go/No-Go rubric.
+                </Typography>
+              </Box>
+
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
+                <Button
+                  type="button"
+                  onClick={handlePrefillGoNoGo}
+                  disabled={aiLoading || !businessUnderstanding}
+                  variant="contained"
+                  color="warning"
+                >
+                  Generate AI Go/No-Go
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSaveGoNoGoAssessment}
+                  disabled={loading || !businessUnderstanding?.id || !goNoGoAssessment}
+                  variant="outlined"
+                >
+                  Save assessment
+                </Button>
+              </Stack>
+            </Stack>
+
+            {!!error && (
+              <Alert
+                severity="error"
+                onClose={() => dispatch(clearError())}
+                sx={{ mb: 0 }}
+              >
+                {String(error)}
+              </Alert>
+            )}
+
+            {goNoGoAssessment?.overall ? (
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Paper variant="outlined" sx={{ p: 2, borderRadius: 2.5 }}>
+                    <Typography variant="overline" color="text.secondary">
+                      Overall status
+                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
+                      <Chip
+                        label={prettyGoNoGo(goNoGoAssessment.overall.status)}
+                        color={GO_NO_GO_COLORS[String(goNoGoAssessment.overall.status || '').toLowerCase()] || 'default'}
+                        variant="filled"
+                      />
+                    </Stack>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Paper variant="outlined" sx={{ p: 2, borderRadius: 2.5 }}>
+                    <Typography variant="overline" color="text.secondary">
+                      Overall score
+                    </Typography>
+                    <Typography variant="h4" fontWeight={900}>
+                      {goNoGoAssessment.overall.score ?? '—'}/100
+                    </Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
+            ) : (
+              <Alert severity="info">
+                No AI Go/No-Go assessment yet. Click “Generate AI Go/No-Go”.
+              </Alert>
+            )}
+
+            {Array.isArray(goNoGoAssessment?.factors) && goNoGoAssessment.factors.length > 0 && (
+              <Stack spacing={2}>
+                {['Business Feasibility', 'Data Feasibility', 'Technology/Execution Feasibility'].map((category) => {
+                  const items = goNoGoAssessment.factors.filter((f) => f?.category === category)
+                  if (!items.length) return null
+                  return (
+                    <Paper key={category} variant="outlined" sx={{ p: 2, borderRadius: 2.5 }}>
+                      <Typography variant="subtitle1" fontWeight={900} gutterBottom>
+                        {category}
+                      </Typography>
+                      <Stack spacing={1.25}>
+                        {items.map((f) => (
+                          <Paper key={f.id} variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                            <Stack spacing={1}>
+                              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="space-between">
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                  <Typography variant="body1" fontWeight={800}>
+                                    {f.question}
+                                  </Typography>
+                                </Box>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                  <Chip
+                                    label={prettyGoNoGo(f.status)}
+                                    color={GO_NO_GO_COLORS[String(f.status || '').toLowerCase()] || 'default'}
+                                    variant={f.user_override ? 'filled' : 'outlined'}
+                                  />
+                                  <TextField
+                                    select
+                                    size="small"
+                                    label="Override"
+                                    value={String(f.status || 'cautious').toLowerCase()}
+                                    onChange={(e) => handleUpdateFactor(f.id, { status: e.target.value })}
+                                    SelectProps={{ native: true }}
+                                    sx={{ minWidth: 140 }}
+                                  >
+                                    <option value="go">Go</option>
+                                    <option value="cautious">Cautious</option>
+                                    <option value="risk">Risk</option>
+                                  </TextField>
+                                </Stack>
+                              </Stack>
+
+                              {(f.rationale || (Array.isArray(f.evidence) && f.evidence.length > 0)) && (
+                                <Box>
+                                  {f.rationale && (
+                                    <Typography variant="body2" color="text.secondary">
+                                      {f.rationale}
+                                    </Typography>
+                                  )}
+                                  {Array.isArray(f.evidence) && f.evidence.length > 0 && (
+                                    <Box sx={{ mt: 0.75 }}>
+                                      {f.evidence.slice(0, 3).map((ev, idx) => (
+                                        <Typography key={idx} variant="caption" color="text.secondary" display="block">
+                                          • {String(ev)}
+                                        </Typography>
+                                      ))}
+                                    </Box>
+                                  )}
+                                </Box>
+                              )}
+                            </Stack>
+                          </Paper>
+                        ))}
+                      </Stack>
+                    </Paper>
+                  )
+                })}
+              </Stack>
+            )}
+          </Stack>
+        </Paper>
 
         {/* Go/No-Go Decision */}
         {businessUnderstanding && (
@@ -904,6 +1160,27 @@ const BusinessUnderstanding = () => {
           </Stack>
         </Box>
       </Stack>
+
+      <TacticalUseCaseDetailDialog
+        open={showUseCaseDialog}
+        onClose={() => setShowUseCaseDialog(false)}
+        useCase={continuationContext.selectedUseCase}
+      />
+
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={4000}
+        onClose={() => setToast((t) => ({ ...t, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setToast((t) => ({ ...t, open: false }))}
+          severity={toast.severity}
+          sx={{ width: '100%' }}
+        >
+          {toast.message}
+        </Alert>
+      </Snackbar>
     </Container>
   )
 }

@@ -383,6 +383,37 @@ export const analyzeFeasibility = createAsyncThunk(
   }
 )
 
+// ============================================================================
+// ASYNC THUNKS - AI Go/No-Go (9-factor)
+// ============================================================================
+
+export const prefillAiGoNoGo = createAsyncThunk(
+  'aiProjects/prefillAiGoNoGo',
+  async (data, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post(`${API_URL}/ai/go-no-go/prefill`, data)
+      return response.data
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.detail || 'Failed to prefill AI Go/No-Go')
+    }
+  }
+)
+
+export const saveAiGoNoGoAssessment = createAsyncThunk(
+  'aiProjects/saveAiGoNoGoAssessment',
+  async ({ businessUnderstandingId, ai_go_no_go_assessment }, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.put(
+        `${API_URL}/business-understanding/${businessUnderstandingId}/ai-go-no-go`,
+        { ai_go_no_go_assessment }
+      )
+      return response.data
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.detail || 'Failed to save AI Go/No-Go assessment')
+    }
+  }
+)
+
 export const assessQuality = createAsyncThunk(
   'aiProjects/assessQuality',
   async (data, { rejectWithValue }) => {
@@ -504,6 +535,7 @@ const aiProjectsSlice = createSlice({
     // AI Agent Results
     aiResults: {
       feasibility: null,
+      goNoGo: null,
       quality: null,
       hyperparameters: null,
       interpretation: null,
@@ -529,6 +561,7 @@ const aiProjectsSlice = createSlice({
     clearAiResults: (state) => {
       state.aiResults = {
         feasibility: null,
+        goNoGo: null,
         quality: null,
         hyperparameters: null,
         interpretation: null,
@@ -705,6 +738,35 @@ const aiProjectsSlice = createSlice({
       })
       .addCase(analyzeFeasibility.rejected, (state, action) => {
         state.aiLoading = false
+        state.error = action.payload
+      })
+
+      // AI Go/No-Go
+      .addCase(prefillAiGoNoGo.pending, (state) => {
+        state.aiLoading = true
+        state.error = null
+      })
+      .addCase(prefillAiGoNoGo.fulfilled, (state, action) => {
+        state.aiLoading = false
+        state.aiResults.goNoGo = action.payload
+      })
+      .addCase(prefillAiGoNoGo.rejected, (state, action) => {
+        state.aiLoading = false
+        state.error = action.payload
+      })
+
+      // NOTE: if multiple AI calls overlap, ensure aiLoading always clears.
+      .addCase(saveAiGoNoGoAssessment.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(saveAiGoNoGoAssessment.fulfilled, (state, action) => {
+        state.loading = false
+        // backend returns the updated BusinessUnderstanding
+        state.businessUnderstanding = action.payload
+      })
+      .addCase(saveAiGoNoGoAssessment.rejected, (state, action) => {
+        state.loading = false
         state.error = action.payload
       })
       .addCase(assessQuality.pending, (state) => {

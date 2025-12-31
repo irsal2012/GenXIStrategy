@@ -74,6 +74,7 @@ class BusinessUnderstandingBase(BaseModel):
     go_no_go_decision: GoNoGoDecisionEnum = GoNoGoDecisionEnum.PENDING
     go_no_go_rationale: Optional[str] = None
     selected_use_case: Optional[Dict[str, Any]] = None
+    ai_go_no_go_assessment: Optional[Dict[str, Any]] = None
 
 
 class BusinessUnderstandingCreate(BusinessUnderstandingBase):
@@ -100,6 +101,7 @@ class BusinessUnderstandingUpdate(BaseModel):
     feasibility_notes: Optional[str] = None
     go_no_go_decision: Optional[GoNoGoDecisionEnum] = None
     go_no_go_rationale: Optional[str] = None
+    ai_go_no_go_assessment: Optional[Dict[str, Any]] = None
 
 
 class BusinessUnderstanding(BusinessUnderstandingBase):
@@ -117,6 +119,7 @@ class BusinessUnderstanding(BusinessUnderstandingBase):
     decision_date: Optional[datetime] = None
     decision_by: Optional[int] = None
     ai_feasibility_analysis: Optional[Dict[str, Any]] = None
+    ai_go_no_go_assessment: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: datetime
     created_by: Optional[int] = None

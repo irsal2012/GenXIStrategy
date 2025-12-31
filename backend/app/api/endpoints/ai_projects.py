@@ -35,10 +35,28 @@ from app.schemas.ai_project import (
 )
 from app.services.ai_project_service import AIProjectService
 from app.agents.ai_project_manager_agent import AIProjectManagerAgent
+from app.services.ai_go_no_go_service import normalize_assessment
 from app.services.semantic_search_service import semantic_search_service
 from app.models.initiative import Initiative
+from app.models.ai_project import BusinessUnderstanding as BusinessUnderstandingModel
 
 router = APIRouter()
+
+
+from pydantic import BaseModel
+from typing import Dict, Any
+
+
+class AIGoNoGoPrefillRequest(BaseModel):
+    initiative_id: int
+    continuation_context: Optional[Dict[str, Any]] = None
+    business_objectives: Optional[str] = None
+    data_sources: Optional[List[Dict[str, Any]]] = None
+    compliance_requirements: Optional[List[str]] = None
+
+
+class AIGoNoGoSaveRequest(BaseModel):
+    ai_go_no_go_assessment: Dict[str, Any]
 
 
 # ============================================================================
@@ -545,13 +563,24 @@ async def update_business_understanding(
 @router.post("/business-understanding/{business_understanding_id}/go-no-go", response_model=BusinessUnderstanding)
 async def record_go_no_go_decision(
     business_understanding_id: int,
-    decision: str = Query(..., regex="^(go|no_go)$"),
-    rationale: str = Query(...),
+    # NOTE: Frontend sends JSON body: { decision, decision_rationale }
+    # Accept body to avoid silent no-op / 422 from mismatched params.
+    payload: dict = Body(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Record Go/No-Go decision"""
-    updated = AIProjectService.record_go_no_go_decision(db, business_understanding_id, decision, rationale, current_user.id)
+    decision = (payload or {}).get("decision")
+    rationale = (payload or {}).get("decision_rationale") or (payload or {}).get("rationale")
+
+    if decision not in ("go", "no_go"):
+        raise HTTPException(status_code=422, detail="decision must be 'go' or 'no_go'")
+    if not rationale or not str(rationale).strip():
+        raise HTTPException(status_code=422, detail="decision_rationale is required")
+
+    updated = AIProjectService.record_go_no_go_decision(
+        db, business_understanding_id, decision, str(rationale), current_user.id
+    )
     if not updated:
         raise HTTPException(status_code=404, detail="Business understanding not found")
     return updated
@@ -980,6 +1009,72 @@ async def analyze_data_feasibility(
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/ai/go-no-go/prefill", response_model=dict)
+async def prefill_ai_go_no_go(
+    request: AIGoNoGoPrefillRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Generate an AI-prefilled 9-factor Go/No-Go assessment.
+
+    Returns a normalized assessment JSON with deterministic overall rollup.
+    Does NOT change the phase governance `go_no_go_decision`.
+    """
+    try:
+        business_understanding = AIProjectService.get_business_understanding_by_initiative(db, request.initiative_id)
+        if not business_understanding:
+            raise HTTPException(status_code=404, detail="Business understanding not found")
+
+        ctx = request.continuation_context or {}
+        business_problem = str(ctx.get("businessProblem") or business_understanding.business_problem_text or "")
+        selected_use_case = ctx.get("selectedUseCase") or business_understanding.selected_use_case
+
+        agent = AIProjectManagerAgent()
+        result = await agent.prefill_go_no_go_assessment(
+            business_problem=business_problem,
+            selected_use_case=selected_use_case,
+            business_objectives=request.business_objectives or business_understanding.business_objectives or "",
+            data_sources=request.data_sources or business_understanding.data_sources_identified or [],
+            compliance_requirements=request.compliance_requirements or business_understanding.compliance_requirements or [],
+        )
+
+        if not result.get("success"):
+            raise HTTPException(status_code=502, detail=result.get("error", "AI Go/No-Go prefill failed"))
+
+        normalized = normalize_assessment(
+            {"generated_by": "ai", **(result.get("data") or {})},
+            user_id=current_user.id,
+        )
+        return {"success": True, "data": normalized}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/business-understanding/{business_understanding_id}/ai-go-no-go", response_model=BusinessUnderstanding)
+async def save_ai_go_no_go(
+    business_understanding_id: int,
+    payload: AIGoNoGoSaveRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Persist the user-edited AI Go/No-Go assessment.
+
+    Server recomputes overall rollup and stamps editor metadata.
+    """
+    bu = db.query(BusinessUnderstandingModel).filter(BusinessUnderstandingModel.id == business_understanding_id).first()
+
+    if not bu:
+        raise HTTPException(status_code=404, detail="Business understanding not found")
+
+    normalized = normalize_assessment(payload.ai_go_no_go_assessment, user_id=current_user.id)
+    bu.ai_go_no_go_assessment = normalized
+    db.commit()
+    db.refresh(bu)
+    return bu
 
 
 @router.post("/ai/assess-quality", response_model=dict)

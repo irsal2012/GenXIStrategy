@@ -57,6 +57,9 @@ def migrate_business_understanding():
             ("ai_recommendation_reasoning", "TEXT"),
             ("user_feedback_no_match", "TEXT"),
             ("compliance_requirements", "JSON"),
+            ("selected_use_case", "JSON"),
+            ("ai_feasibility_analysis", "JSON"),
+            ("ai_go_no_go_assessment", "JSON"),
         ]
         
         # Add missing columns

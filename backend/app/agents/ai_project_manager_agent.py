@@ -7,6 +7,7 @@ from typing import Dict, Any, List
 import json
 from openai import OpenAI
 from app.agents.base_agent import BaseAgent
+from app.core.config import settings
 
 
 def _extract_json_from_text(text: str) -> dict:
@@ -50,6 +51,16 @@ class AIProjectManagerAgent(BaseAgent):
     Provides AI-powered analysis and recommendations for AI project lifecycle management
     Enhanced with PMI-CPMAI workflow support
     """
+
+    def __init__(self, openai_client: OpenAI | None = None, model: str | None = None):
+        """Create an AIProjectManagerAgent.
+
+        Many endpoints instantiate this agent with no args (AIProjectManagerAgent()).
+        BaseAgent requires a configured OpenAI client + model, so we default them
+        from application settings.
+        """
+        client = openai_client or OpenAI(api_key=settings.openai_api_key)
+        super().__init__(client, model or settings.OPENAI_MODEL)
 
     # PMI-CPMAI Seven Patterns
     PMI_PATTERNS = [
@@ -403,6 +414,90 @@ Respond in JSON format:
                 data=result,
                 message="Data feasibility analysis completed"
             )
+        except Exception as e:
+            return self._handle_error(e)
+
+    async def prefill_go_no_go_assessment(
+        self,
+        *,
+        business_problem: str = "",
+        selected_use_case: Dict[str, Any] | None = None,
+        business_objectives: str = "",
+        data_sources: List[Dict[str, Any]] | None = None,
+        compliance_requirements: List[str] | None = None,
+    ) -> Dict[str, Any]:
+        """Prefill the 9-factor AI Go/No-Go assessment.
+
+        The deterministic rollup (overall score/status) is computed server-side.
+        This method only proposes factor-level statuses and rationales.
+        """
+        data_sources = data_sources or []
+        compliance_requirements = compliance_requirements or []
+        selected_use_case = selected_use_case or None
+
+        prompt = f"""
+You are an AI Project Manager performing an AI Go/No-Go gate assessment.
+
+You must assess 9 factors across 3 categories:
+
+BUSINESS FEASIBILITY
+1) Is there a clear problem definition?
+2) Is the organization willing to invest and change?
+3) Is there sufficient ROI or impact?
+
+DATA FEASIBILITY
+4) Do you have the required data that measures what you care about?
+5) Is there sufficient quantity of data needed to train systems, and do you have access to that data?
+6) Is the data of sufficient quality?
+
+TECHNOLOGY/EXECUTION FEASIBILITY
+7) Do you have the required technology and skills?
+8) Can you execute the model as required in a timely manner?
+9) Does it make sense to use the model where you plan to use it?
+
+Context:
+- Business problem: {business_problem or "(not provided)"}
+- Selected tactical use case (may be empty): {json.dumps(selected_use_case) if selected_use_case else "(none)"}
+- Business objectives: {business_objectives or "(not provided)"}
+- Data sources (name/description/available): {json.dumps(data_sources) if data_sources else "(none)"}
+- Compliance requirements: {', '.join(compliance_requirements) if compliance_requirements else "(none)"}
+
+For EACH of the 9 factors, return:
+- id: stable id from the list below
+- category: one of [Business Feasibility, Data Feasibility, Technology/Execution Feasibility]
+- question: exact question text
+- status: one of [go, cautious, risk]
+- confidence: 0-1
+- rationale: 1-3 sentences
+- evidence: 0-3 bullet-like strings citing specific context elements (be concrete)
+
+IDs:
+- business.problem_definition
+- business.invest_change
+- business.roi_impact
+- data.required_data_exists
+- data.quantity_access
+- data.quality
+- execution.tech_skills
+- execution.timing
+- execution.deployment_fit
+
+Respond in JSON format:
+{{
+  "factors": [
+    {{"id": "...", "category": "...", "question": "...", "status": "go|cautious|risk", "confidence": 0.0, "rationale": "...", "evidence": ["..."]}}
+  ]
+}}
+"""
+
+        try:
+            response = await self._call_openai(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+            )
+            result = self._parse_json_response(response)
+            self._log_agent_call("prefill_go_no_go_assessment", True, "AI Go/No-Go prefill completed")
+            return self._format_success_response(data=result, message="AI Go/No-Go prefill completed")
         except Exception as e:
             return self._handle_error(e)
 
