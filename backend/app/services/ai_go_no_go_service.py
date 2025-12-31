@@ -71,6 +71,32 @@ FACTOR_DEFS: List[GoNoGoFactorDef] = [
         category="Technology/Execution Feasibility",
         question="Does it make sense to use the model where you plan to use it?",
     ),
+    # Trustworthy AI (Five Layers)
+    GoNoGoFactorDef(
+        id="trustworthy.ethical_ai",
+        category="Trustworthy AI",
+        question="Does the AI system align with ethical principles and societal values?",
+    ),
+    GoNoGoFactorDef(
+        id="trustworthy.responsible_ai",
+        category="Trustworthy AI",
+        question="Are there clear accountability measures for AI decisions and outcomes?",
+    ),
+    GoNoGoFactorDef(
+        id="trustworthy.transparent_ai",
+        category="Trustworthy AI",
+        question="Can stakeholders understand how the AI system works and makes decisions?",
+    ),
+    GoNoGoFactorDef(
+        id="trustworthy.governed_ai",
+        category="Trustworthy AI",
+        question="Are proper oversight, policies, and compliance frameworks in place?",
+    ),
+    GoNoGoFactorDef(
+        id="trustworthy.explainable_ai",
+        category="Trustworthy AI",
+        question="Can the AI system explain its decisions in human-understandable terms?",
+    ),
 ]
 
 
@@ -170,4 +196,3 @@ def normalize_assessment(raw: Dict[str, Any], *, user_id: Optional[int] = None) 
     }
 
     return normalized
-

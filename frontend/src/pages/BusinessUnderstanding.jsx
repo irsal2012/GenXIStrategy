@@ -50,6 +50,56 @@ const GO_NO_GO_COLORS = {
   risk: 'error',
 }
 
+// Trustworthy AI (5 layers)
+// Ensure these are always shown in the UI (even if the backend returns only the legacy 9-factor list)
+// so users can validate/govern against the full rubric.
+const TRUSTWORTHY_AI_LAYER_IDS = [
+  'trustworthy.ethical_ai',
+  'trustworthy.responsible_ai',
+  'trustworthy.transparent_ai',
+  'trustworthy.governed_ai',
+  'trustworthy.explainable_ai',
+]
+
+const TRUSTWORTHY_AI_LAYER_QUESTIONS = {
+  'trustworthy.ethical_ai': 'Does the AI system align with ethical principles and societal values?',
+  'trustworthy.responsible_ai': 'Are there clear accountability measures for AI decisions and outcomes?',
+  'trustworthy.transparent_ai': 'Can stakeholders understand how the AI system works and makes decisions?',
+  'trustworthy.governed_ai': 'Are proper oversight, policies, and compliance frameworks in place?',
+  'trustworthy.explainable_ai': 'Can the AI system explain its decisions in human-understandable terms?',
+}
+
+const ensureTrustworthyAiLayers = (assessment) => {
+  if (!assessment || !Array.isArray(assessment.factors)) return assessment
+
+  const existing = assessment.factors
+  const byId = new Map(existing.filter(Boolean).map((f) => [String(f.id), f]))
+
+  const hasAnyLayer = TRUSTWORTHY_AI_LAYER_IDS.some((id) => byId.has(id))
+  const hasTrustworthyCategory = existing.some((f) => String(f?.category || '') === 'Trustworthy AI')
+
+  // If we have any trustworthy-ai data already, don't synthesize.
+  if (hasAnyLayer || hasTrustworthyCategory) return assessment
+
+  const synthesized = TRUSTWORTHY_AI_LAYER_IDS.map((id) => ({
+    id,
+    category: 'Trustworthy AI',
+    question: TRUSTWORTHY_AI_LAYER_QUESTIONS[id] || id,
+    // default to cautious so user is nudged to review and override.
+    status: 'cautious',
+    confidence: 0.5,
+    rationale: '',
+    evidence: [],
+    user_override: false,
+    synthesized: true,
+  }))
+
+  return {
+    ...assessment,
+    factors: [...existing, ...synthesized],
+  }
+}
+
 const prettyGoNoGo = (value) => {
   const v = String(value || '').toLowerCase()
   if (v === 'go') return 'Go'
@@ -196,14 +246,14 @@ const BusinessUnderstanding = () => {
 
       // hydrate go/no-go assessment from DB if present
       if (businessUnderstanding.ai_go_no_go_assessment) {
-        setGoNoGoAssessment(businessUnderstanding.ai_go_no_go_assessment)
+        setGoNoGoAssessment(ensureTrustworthyAiLayers(businessUnderstanding.ai_go_no_go_assessment))
       }
     }
   }, [businessUnderstanding])
 
   useEffect(() => {
     if (aiGoNoGo?.success && aiGoNoGo?.data) {
-      setGoNoGoAssessment(aiGoNoGo.data)
+      setGoNoGoAssessment(ensureTrustworthyAiLayers(aiGoNoGo.data))
       setToast({ open: true, message: 'AI Go/No-Go assessment generated.', severity: 'success' })
     }
   }, [aiGoNoGo])
@@ -775,16 +825,40 @@ const BusinessUnderstanding = () => {
 
             {Array.isArray(goNoGoAssessment?.factors) && goNoGoAssessment.factors.length > 0 && (
               <Stack spacing={2}>
-                {['Business Feasibility', 'Data Feasibility', 'Technology/Execution Feasibility'].map((category) => {
+                {['Business Feasibility', 'Data Feasibility', 'Technology/Execution Feasibility', 'Trustworthy AI'].map((category) => {
                   const items = goNoGoAssessment.factors.filter((f) => f?.category === category)
                   if (!items.length) return null
+
+                  // Trustworthy AI should always show 5 layers; if ids exist, enforce ordering.
+                  const orderedItems =
+                    category === 'Trustworthy AI'
+                      ? (() => {
+                          const byId = new Map(items.map((f) => [String(f?.id), f]))
+                          const inOrder = TRUSTWORTHY_AI_LAYER_IDS.map((id) => byId.get(id)).filter(Boolean)
+                          // If backend uses category without ids (unlikely), fall back to original.
+                          return inOrder.length ? inOrder : items
+                        })()
+                      : items
                   return (
-                    <Paper key={category} variant="outlined" sx={{ p: 2, borderRadius: 2.5 }}>
+                    <Paper 
+                      key={category} 
+                      variant="outlined" 
+                      sx={{ 
+                        p: 2, 
+                        borderRadius: 2.5,
+                        // Highlight Trustworthy AI section
+                        ...(category === 'Trustworthy AI' && {
+                          bgcolor: 'rgba(124, 58, 237, 0.06)',
+                          borderColor: 'secondary.main',
+                          borderWidth: 2
+                        })
+                      }}
+                    >
                       <Typography variant="subtitle1" fontWeight={900} gutterBottom>
                         {category}
                       </Typography>
                       <Stack spacing={1.25}>
-                        {items.map((f) => (
+                        {orderedItems.map((f) => (
                           <Paper key={f.id} variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
                             <Stack spacing={1}>
                               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="space-between">

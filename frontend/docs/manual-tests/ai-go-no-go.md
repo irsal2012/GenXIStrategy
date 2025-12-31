@@ -1,5 +1,16 @@
 # Manual Test: AI Go/No-Go (9-factor gate)
 
+### Trustworthy AI (Five Layers) visibility
+
+- Navigate to **Phase 1: Business Understanding** for an initiative.
+- In **AI Go/No-Go (9-factor gate)**, verify the **Trustworthy AI** category renders **five** items:
+  1. Ethical AI
+  2. Responsible AI
+  3. Transparent AI
+  4. Governed AI
+  5. Explainable AI
+- If the backend assessment payload is missing these layers, the UI should still display them with default **Cautious** status so users can override and save.
+
 ## Prereqs
 - Backend running
 - Frontend running
@@ -19,4 +30,3 @@
 ## Notes
 - This assessment is a *suggestion only* and does **not** automatically change the phase governance **Go/No-Go Decision**.
 - Backend recomputes the overall rollup when saving.
-

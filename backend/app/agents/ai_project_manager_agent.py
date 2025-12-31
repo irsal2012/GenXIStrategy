@@ -426,7 +426,7 @@ Respond in JSON format:
         data_sources: List[Dict[str, Any]] | None = None,
         compliance_requirements: List[str] | None = None,
     ) -> Dict[str, Any]:
-        """Prefill the 9-factor AI Go/No-Go assessment.
+        """Prefill the 14-factor AI Go/No-Go assessment (9 original + 5 Trustworthy AI).
 
         The deterministic rollup (overall score/status) is computed server-side.
         This method only proposes factor-level statuses and rationales.
@@ -438,7 +438,7 @@ Respond in JSON format:
         prompt = f"""
 You are an AI Project Manager performing an AI Go/No-Go gate assessment.
 
-You must assess 9 factors across 3 categories:
+You must assess 14 factors across 4 categories:
 
 BUSINESS FEASIBILITY
 1) Is there a clear problem definition?
@@ -455,6 +455,13 @@ TECHNOLOGY/EXECUTION FEASIBILITY
 8) Can you execute the model as required in a timely manner?
 9) Does it make sense to use the model where you plan to use it?
 
+TRUSTWORTHY AI (Five Layers)
+10) Does the AI system align with ethical principles and societal values? (Ethical AI)
+11) Are there clear accountability measures for AI decisions and outcomes? (Responsible AI)
+12) Can stakeholders understand how the AI system works and makes decisions? (Transparent AI)
+13) Are proper oversight, policies, and compliance frameworks in place? (Governed AI)
+14) Can the AI system explain its decisions in human-understandable terms? (Explainable AI)
+
 Context:
 - Business problem: {business_problem or "(not provided)"}
 - Selected tactical use case (may be empty): {json.dumps(selected_use_case) if selected_use_case else "(none)"}
@@ -462,16 +469,16 @@ Context:
 - Data sources (name/description/available): {json.dumps(data_sources) if data_sources else "(none)"}
 - Compliance requirements: {', '.join(compliance_requirements) if compliance_requirements else "(none)"}
 
-For EACH of the 9 factors, return:
+For EACH of the 14 factors, return:
 - id: stable id from the list below
-- category: one of [Business Feasibility, Data Feasibility, Technology/Execution Feasibility]
+- category: one of [Business Feasibility, Data Feasibility, Technology/Execution Feasibility, Trustworthy AI]
 - question: exact question text
 - status: one of [go, cautious, risk]
 - confidence: 0-1
-- rationale: 1-3 sentences
+- rationale: 1-3 sentences explaining your assessment
 - evidence: 0-3 bullet-like strings citing specific context elements (be concrete)
 
-IDs:
+IDs for all 14 factors:
 - business.problem_definition
 - business.invest_change
 - business.roi_impact
@@ -481,6 +488,18 @@ IDs:
 - execution.tech_skills
 - execution.timing
 - execution.deployment_fit
+- trustworthy.ethical_ai
+- trustworthy.responsible_ai
+- trustworthy.transparent_ai
+- trustworthy.governed_ai
+- trustworthy.explainable_ai
+
+For the Trustworthy AI factors, consider:
+- Ethical AI: Potential biases, fairness concerns, social impact, alignment with values
+- Responsible AI: Clear ownership, decision accountability, impact monitoring, human oversight
+- Transparent AI: Stakeholder understanding, documentation, communication of limitations
+- Governed AI: Policies, compliance frameworks, approval processes, audit trails
+- Explainable AI: Model interpretability, decision explanations, XAI techniques availability
 
 Respond in JSON format:
 {{
