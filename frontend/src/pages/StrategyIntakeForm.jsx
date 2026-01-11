@@ -65,10 +65,14 @@ const StrategyIntakeForm = () => {
   // Theme selection state for Step 2 (single selection with radio button)
   const [selectedTheme, setSelectedTheme] = useState('');
   const [availableThemes, setAvailableThemes] = useState([]);
+  const [customThemeName, setCustomThemeName] = useState('');
+  const [customThemeDescription, setCustomThemeDescription] = useState('');
   
   // Capability selection state for Step 3 (single selection with radio button)
   const [selectedCapability, setSelectedCapability] = useState('');
   const [availableCapabilities, setAvailableCapabilities] = useState([]);
+  const [customCapabilityName, setCustomCapabilityName] = useState('');
+  const [customCapabilityDescription, setCustomCapabilityDescription] = useState('');
   
   // Initiative selection state for Step 4 (multiple selection with checkboxes)
   const [selectedInitiatives, setSelectedInitiatives] = useState([]);
@@ -197,16 +201,42 @@ const StrategyIntakeForm = () => {
   const handleExecuteStepWithSelection = (stepOrder) => {
     // For step 2, pass selected theme as user input (single selection)
     if (stepOrder === 2 && selectedTheme) {
-      const userInput = {
-        selected_theme_ids: [selectedTheme]  // Send as array with single item
-      };
+      let userInput;
+      
+      // If user-defined theme is selected, send custom theme data
+      if (selectedTheme === 'user-defined') {
+        userInput = {
+          selected_theme_ids: ['user-defined'],
+          custom_theme: {
+            name: customThemeName,
+            description: customThemeDescription
+          }
+        };
+      } else {
+        userInput = {
+          selected_theme_ids: [selectedTheme]  // Send as array with single item
+        };
+      }
       handleExecuteStep(stepOrder, userInput);
     }
     // For step 3, pass selected capability as user input (single selection)
     else if (stepOrder === 3 && selectedCapability) {
-      const userInput = {
-        selected_capability_ids: [selectedCapability]  // Send as array with single item
-      };
+      let userInput;
+      
+      // If user-defined capability is selected, send custom capability data
+      if (selectedCapability === 'user-defined') {
+        userInput = {
+          selected_capability_ids: ['user-defined'],
+          custom_capability: {
+            name: customCapabilityName,
+            description: customCapabilityDescription
+          }
+        };
+      } else {
+        userInput = {
+          selected_capability_ids: [selectedCapability]  // Send as array with single item
+        };
+      }
       handleExecuteStep(stepOrder, userInput);
     }
     // For step 4, pass selected initiatives as user input (multiple selection)
@@ -597,7 +627,46 @@ const StrategyIntakeForm = () => {
                                   }
                                 />
                               ))}
+                              <FormControlLabel
+                                value="user-defined"
+                                control={<Radio />}
+                                label={
+                                  <Box>
+                                    <Typography variant="body2" fontWeight="bold">
+                                      User Defined
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Define your own custom strategic orientation
+                                    </Typography>
+                                  </Box>
+                                }
+                              />
                             </RadioGroup>
+                            
+                            {/* Show custom input fields when "User Defined" is selected */}
+                            {selectedTheme === 'user-defined' && (
+                              <Box sx={{ mt: 2, pl: 4 }}>
+                                <TextField
+                                  fullWidth
+                                  label="Strategic Orientation Name"
+                                  value={customThemeName}
+                                  onChange={(e) => setCustomThemeName(e.target.value)}
+                                  placeholder="e.g., Innovation-Driven Growth"
+                                  sx={{ mb: 2 }}
+                                  required
+                                />
+                                <TextField
+                                  fullWidth
+                                  multiline
+                                  rows={3}
+                                  label="Strategic Orientation Description"
+                                  value={customThemeDescription}
+                                  onChange={(e) => setCustomThemeDescription(e.target.value)}
+                                  placeholder="Describe your custom strategic orientation and how it aligns with your corporate strategy..."
+                                  required
+                                />
+                              </Box>
+                            )}
                           </Card>
                         )}
 
@@ -628,7 +697,46 @@ const StrategyIntakeForm = () => {
                                   }
                                 />
                               ))}
+                              <FormControlLabel
+                                value="user-defined"
+                                control={<Radio />}
+                                label={
+                                  <Box>
+                                    <Typography variant="body2" fontWeight="bold">
+                                      User Defined
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Define your own custom strategic capability need
+                                    </Typography>
+                                  </Box>
+                                }
+                              />
                             </RadioGroup>
+                            
+                            {/* Show custom input fields when "User Defined" is selected */}
+                            {selectedCapability === 'user-defined' && (
+                              <Box sx={{ mt: 2, pl: 4 }}>
+                                <TextField
+                                  fullWidth
+                                  label="Strategic Capability Need Name"
+                                  value={customCapabilityName}
+                                  onChange={(e) => setCustomCapabilityName(e.target.value)}
+                                  placeholder="e.g., Advanced Predictive Analytics"
+                                  sx={{ mb: 2 }}
+                                  required
+                                />
+                                <TextField
+                                  fullWidth
+                                  multiline
+                                  rows={3}
+                                  label="Strategic Capability Need Description"
+                                  value={customCapabilityDescription}
+                                  onChange={(e) => setCustomCapabilityDescription(e.target.value)}
+                                  placeholder="Describe your custom strategic capability need and how it supports your strategic orientation..."
+                                  required
+                                />
+                              </Box>
+                            )}
                           </Card>
                         )}
 
@@ -680,8 +788,10 @@ const StrategyIntakeForm = () => {
                             disabled={
                               loading || 
                               !canExecute || 
-                              (stepExec.step_order === 2 && availableThemes.length > 0 && !selectedTheme) || 
-                              (stepExec.step_order === 3 && availableCapabilities.length > 0 && !selectedCapability) || 
+                              (stepExec.step_order === 2 && availableThemes.length > 0 && !selectedTheme) ||
+                              (stepExec.step_order === 2 && selectedTheme === 'user-defined' && (!customThemeName.trim() || !customThemeDescription.trim())) ||
+                              (stepExec.step_order === 3 && availableCapabilities.length > 0 && !selectedCapability) ||
+                              (stepExec.step_order === 3 && selectedCapability === 'user-defined' && (!customCapabilityName.trim() || !customCapabilityDescription.trim())) ||
                               (stepExec.step_order === 4 && availableInitiatives.length > 0 && selectedInitiatives.length === 0)
                             }
                           >
