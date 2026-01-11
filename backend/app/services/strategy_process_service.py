@@ -568,6 +568,10 @@ Return the corrected JSON that passes validation."""
                 data_sources=content.get("data_sources", []),
                 expected_roi=content.get("expected_roi"),
                 budget_allocated=content.get("budget_estimate", 0),
+                business_value_score=8,  # Default high business value from strategic process
+                technical_feasibility_score=7,  # Default reasonable feasibility
+                strategic_alignment_score=9,  # High alignment since derived from strategy
+                risk_score=5,  # Medium risk by default
                 priority=InitiativePriority.MEDIUM,
                 owner_id=user_id
             )
