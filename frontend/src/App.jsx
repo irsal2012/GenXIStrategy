@@ -10,6 +10,7 @@ import InitiativesList from './pages/InitiativesList'
 import InitiativeDetail from './pages/InitiativeDetail'
 import InitiativeForm from './pages/InitiativeForm'
 import IntakeForm from './pages/IntakeForm'
+import StrategyIntakeForm from './pages/StrategyIntakeForm'
 import PortfolioRankings from './pages/PortfolioRankings'
 import PortfolioBalance from './pages/PortfolioBalance'
 import RoadmapTimeline from './pages/RoadmapTimeline'
@@ -66,6 +67,7 @@ function App() {
         >
           <Route index element={<Dashboard />} />
           <Route path="intake" element={<IntakeForm />} />
+          <Route path="strategy-intake" element={<StrategyIntakeForm />} />
           <Route path="initiatives" element={<InitiativesList />} />
           <Route path="initiatives/new" element={<InitiativeForm />} />
           <Route path="initiatives/:id" element={<InitiativeDetail />} />

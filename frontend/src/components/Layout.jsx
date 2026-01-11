@@ -53,7 +53,8 @@ function Layout() {
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-    { text: 'New Intake', icon: <AddCircleIcon />, path: '/intake' },
+    { text: 'Quick Intake', icon: <AddCircleIcon />, path: '/intake' },
+    { text: 'Strategic Intake', icon: <PsychologyIcon />, path: '/strategy-intake' },
     { text: 'Initiatives', icon: <AssignmentIcon />, path: '/initiatives' },
     { text: 'Portfolio Rankings', icon: <EmojiEventsIcon />, path: '/portfolio/rankings' },
     { text: 'Portfolio Balance', icon: <PieChartIcon />, path: '/portfolio/balance' },
