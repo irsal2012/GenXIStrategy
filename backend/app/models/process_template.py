@@ -146,8 +146,10 @@ class StrategyArtifact(Base):
     # Traceability chain
     parent_artifact_id = Column(Integer, ForeignKey("strategy_artifacts.id"), nullable=True)
     
-    # If this artifact resulted in an Initiative, link it
-    initiative_id = Column(Integer, ForeignKey("initiatives.id"), nullable=True)
+    # If this artifact resulted in an Initiative, link it.
+    # Use ON DELETE SET NULL so deleting an initiative doesn't fail due to FK constraints.
+    # The artifact should remain as historical traceability.
+    initiative_id = Column(Integer, ForeignKey("initiatives.id", ondelete="SET NULL"), nullable=True)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)

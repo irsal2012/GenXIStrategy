@@ -98,7 +98,18 @@ class GovernanceWorkflow(Base):
 
     # Relationships
     initiative = relationship("Initiative", back_populates="governance_workflow")
-    stages = relationship("WorkflowStage", back_populates="workflow", foreign_keys="WorkflowStage.workflow_id")
+
+    # IMPORTANT:
+    # Deleting an Initiative should also delete its GovernanceWorkflow and all WorkflowStage rows.
+    # Without an explicit cascade here, SQLAlchemy may NULL out workflow_id on stages when the
+    # workflow is deleted, which violates the NOT NULL constraint on workflow_stages.workflow_id.
+    stages = relationship(
+        "WorkflowStage",
+        back_populates="workflow",
+        foreign_keys="WorkflowStage.workflow_id",
+        cascade="all, delete-orphan",
+    )
+
     current_stage = relationship("WorkflowStage", foreign_keys=[current_stage_id], post_update=True)
 
 
@@ -107,7 +118,11 @@ class WorkflowStage(Base):
     __tablename__ = "workflow_stages"
 
     id = Column(Integer, primary_key=True, index=True)
-    workflow_id = Column(Integer, ForeignKey("governance_workflows.id"), nullable=False)
+    workflow_id = Column(
+        Integer,
+        ForeignKey("governance_workflows.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     stage_name = Column(String(255), nullable=False)
     stage_order = Column(Integer, nullable=False)
     description = Column(Text)
@@ -122,7 +137,7 @@ class WorkflowStage(Base):
 
     # Relationships
     workflow = relationship("GovernanceWorkflow", back_populates="stages", foreign_keys=[workflow_id])
-    approvals = relationship("WorkflowApproval", back_populates="stage")
+    approvals = relationship("WorkflowApproval", back_populates="stage", cascade="all, delete-orphan")
 
 
 class WorkflowApproval(Base):

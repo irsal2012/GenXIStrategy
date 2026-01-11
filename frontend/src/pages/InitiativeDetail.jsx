@@ -144,7 +144,8 @@ function InitiativeDetail() {
         await axiosInstance.delete(`/initiatives/${id}`)
         navigate('/initiatives')
       } catch (err) {
-        setError('Failed to delete initiative')
+        // Surface backend message when available (helps debug FK constraint issues)
+        setError(err.response?.data?.detail || err.message || 'Failed to delete initiative')
       }
     }
   }

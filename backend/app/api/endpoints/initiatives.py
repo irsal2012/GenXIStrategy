@@ -8,6 +8,7 @@ from app.models.initiative import Initiative
 from app.schemas.initiative import InitiativeCreate, InitiativeUpdate, Initiative as InitiativeSchema
 from app.services.openai_service import openai_service
 from app.services.semantic_search_service import semantic_search_service
+from sqlalchemy.exc import IntegrityError
 
 router = APIRouter()
 
@@ -115,12 +116,12 @@ async def update_initiative(
 
 
 @router.delete("/{initiative_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_initiative(
+async def delete_initiative(
     initiative_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Delete an initiative."""
+    """Delete an initiative and its embedding."""
     initiative = db.query(Initiative).filter(Initiative.id == initiative_id).first()
     if not initiative:
         raise HTTPException(
@@ -128,8 +129,28 @@ def delete_initiative(
             detail="Initiative not found"
         )
     
-    db.delete(initiative)
-    db.commit()
+    # Delete the initiative (ORM cascades will handle most related records).
+    # If any FK constraint remains (e.g. historical/traceability tables), surface a clear error.
+    try:
+        db.delete(initiative)
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Unable to delete initiative due to related records. "
+                "Remove/cleanup dependent records and try again."
+            ),
+        ) from e
+    
+    # Remove embedding from semantic search
+    try:
+        semantic_search_service.delete_initiative_embedding(initiative_id)
+    except Exception as e:
+        # Log error but don't fail the deletion
+        print(f"Warning: Failed to remove embedding for initiative {initiative_id}: {str(e)}")
+    
     return None
 
 
