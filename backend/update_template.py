@@ -117,8 +117,8 @@ Return as JSON:
             "properties": {
                 "objectives": {
                     "type": "array",
-                    "minItems": 4,
-                    "maxItems": 6,
+                    "minItems": 1,
+                    "maxItems": 10,
                     "items": {
                         "type": "object",
                         "required": ["id", "name", "description", "theme_id", "objective_type", "target_metric", "baseline", "target", "target_date", "priority"],
