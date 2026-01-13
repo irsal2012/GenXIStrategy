@@ -322,7 +322,7 @@ class StrategyProcessService:
         artifact_type = artifact_type_map.get(step_exec.step_type, ArtifactType.CUSTOM)
         
         # Extract individual artifacts based on output structure
-        # New Flow: Strategic Orientation (themes) → Capability Needs → AI Initiatives → KPIs
+        # New Flow: Strategic Orientation (themes) → Strategic Objectives → Capability Needs → AI Initiatives → KPIs
         if step_exec.step_type == StepType.STRATEGY_ANALYSIS:
             # Step 1: Strategic Orientation - Create artifacts for themes
             for theme in output_data.get("themes", []):
@@ -336,17 +336,40 @@ class StrategyProcessService:
                 self.db.add(artifact)
                 artifacts.append(artifact)
         
-        elif step_exec.step_type == StepType.CAPABILITY_MAPPING:
-            # Step 2: Strategic Capability Needs - Create artifacts for capabilities
-            for capability in output_data.get("capabilities", []):
-                # Find parent theme artifacts
-                theme_ids = capability.get("theme_ids", [])
-                # Link to first theme for simplicity (could create multiple links)
+        elif step_exec.step_type == StepType.OBJECTIVE_GENERATION and step_exec.step_order == 2:
+            # Step 2: Strategic Objectives - Create artifacts for objectives
+            for objective in output_data.get("objectives", []):
+                # Find parent theme artifact
+                theme_id = objective.get("theme_id")
                 parent = None
-                if theme_ids:
+                if theme_id:
                     parent = self.db.query(StrategyArtifact).filter(
                         StrategyArtifact.process_execution_id == execution.id,
-                        StrategyArtifact.artifact_key == theme_ids[0]
+                        StrategyArtifact.artifact_key == theme_id
+                    ).first()
+                
+                artifact = StrategyArtifact(
+                    process_execution_id=execution.id,
+                    step_execution_id=step_exec.id,
+                    artifact_type=ArtifactType.OBJECTIVE,
+                    artifact_key=objective.get("id"),
+                    content=objective,
+                    parent_artifact_id=parent.id if parent else None
+                )
+                self.db.add(artifact)
+                artifacts.append(artifact)
+        
+        elif step_exec.step_type == StepType.CAPABILITY_MAPPING:
+            # Step 3: Strategic Capability Needs - Create artifacts for capabilities
+            for capability in output_data.get("capabilities", []):
+                # Find parent objective artifacts
+                objective_ids = capability.get("objective_ids", [])
+                # Link to first objective for simplicity (could create multiple links)
+                parent = None
+                if objective_ids:
+                    parent = self.db.query(StrategyArtifact).filter(
+                        StrategyArtifact.process_execution_id == execution.id,
+                        StrategyArtifact.artifact_key == objective_ids[0]
                     ).first()
                 
                 artifact = StrategyArtifact(
@@ -361,7 +384,7 @@ class StrategyProcessService:
                 artifacts.append(artifact)
         
         elif step_exec.step_type == StepType.INITIATIVE_GENERATION:
-            # Step 3: Strategic AI Initiative - Create artifacts for initiatives
+            # Step 4: Strategic AI Initiative - Create artifacts for initiatives
             for initiative in output_data.get("initiatives", []):
                 # Find parent capability artifact
                 capability_id = initiative.get("capability_id")
@@ -381,8 +404,8 @@ class StrategyProcessService:
                 self.db.add(artifact)
                 artifacts.append(artifact)
         
-        elif step_exec.step_type == StepType.OBJECTIVE_GENERATION:
-            # Step 4: Business Objectives (KPIs) - Create artifacts for KPIs
+        elif step_exec.step_type == StepType.OBJECTIVE_GENERATION and step_exec.step_order == 5:
+            # Step 5: Business Objectives (KPIs) - Create artifacts for KPIs
             for kpi in output_data.get("kpis", []):
                 # Find parent initiative artifact
                 initiative_id = kpi.get("initiative_id")

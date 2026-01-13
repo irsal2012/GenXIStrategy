@@ -54,7 +54,7 @@ def create_default_template(engine):
             return
         
         # Define the default template steps
-        # New Flow: Corporate Strategy → Strategic Orientation → Strategic Capability Needs → Strategic AI Initiative → Business Objectives (KPIs)
+        # New Flow: Corporate Strategy → Strategic Orientation → Strategic Objectives → Strategic Capability Needs → Strategic AI Initiative → Business Objectives (KPIs)
         default_steps = [
             {
                 "name": "Strategic Orientation",
@@ -109,11 +109,11 @@ Return as JSON with structure:
                 }
             },
             {
-                "name": "Strategic Capability Needs",
-                "type": "capability_mapping",
+                "name": "Strategic Objectives",
+                "type": "objective_generation",
                 "order": 2,
-                "description": "Identify AI capabilities needed to achieve strategic themes",
-                "prompt_template": """Based on the strategic themes, identify the AI capabilities needed to achieve each theme.
+                "description": "Define specific, measurable strategic objectives for selected themes",
+                "prompt_template": """Based on the selected strategic themes, define 4-6 specific, measurable strategic objectives that the organization must achieve.
 
 Strategic Themes:
 {previous_output}
@@ -124,13 +124,94 @@ Selected Theme IDs (user selected):
 Corporate Strategy:
 {corporate_strategy}
 
-IMPORTANT: Only generate capabilities for the themes with IDs in the selected_theme_ids list. Ignore other themes.
+IMPORTANT: Only generate objectives for the themes with IDs in the selected_theme_ids list. Ignore other themes.
+
+For each strategic objective, provide:
+- Unique ID (obj_1, obj_2, etc.)
+- Name (clear, specific objective statement)
+- Description (detailed explanation of what success looks like)
+- Linked theme ID from strategic orientation
+- Objective type (e.g., "Revenue Growth", "Cost Reduction", "Customer Satisfaction", "Operational Excellence", "Innovation", "Market Expansion")
+- Target metric (what will be measured)
+- Baseline value (current state)
+- Target value (desired state)
+- Target date (when this should be achieved)
+- Priority (high, medium, low)
+- Success criteria (how we'll know we've achieved it)
+
+Return as JSON:
+{
+  "objectives": [
+    {
+      "id": "obj_1",
+      "name": "Achieve 95% Customer Satisfaction Score",
+      "description": "Transform customer experience to achieve industry-leading satisfaction scores through AI-powered personalization and support",
+      "theme_id": "theme_1",
+      "objective_type": "Customer Satisfaction",
+      "target_metric": "Customer Satisfaction Score (CSAT)",
+      "baseline": 72,
+      "target": 95,
+      "target_date": "2026-12-31",
+      "priority": "high",
+      "success_criteria": "Sustained CSAT score of 95% or higher for 3 consecutive quarters"
+    }
+  ]
+}""",
+                "output_schema": {
+                    "type": "object",
+                    "required": ["objectives"],
+                    "properties": {
+                        "objectives": {
+                            "type": "array",
+                            "minItems": 4,
+                            "maxItems": 6,
+                            "items": {
+                                "type": "object",
+                                "required": ["id", "name", "description", "theme_id", "objective_type", "target_metric", "baseline", "target", "target_date", "priority"],
+                                "properties": {
+                                    "id": {"type": "string", "pattern": "^obj_[0-9]+$"},
+                                    "name": {"type": "string"},
+                                    "description": {"type": "string"},
+                                    "theme_id": {"type": "string"},
+                                    "objective_type": {"type": "string"},
+                                    "target_metric": {"type": "string"},
+                                    "baseline": {"type": "number"},
+                                    "target": {"type": "number"},
+                                    "target_date": {"type": "string"},
+                                    "priority": {"type": "string", "enum": ["high", "medium", "low"]},
+                                    "success_criteria": {"type": "string"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                "name": "Strategic Capability Needs",
+                "type": "capability_mapping",
+                "order": 3,
+                "description": "Identify AI capabilities needed to achieve strategic objectives",
+                "prompt_template": """Based on the strategic objectives, identify the AI capabilities needed to achieve each objective.
+
+Strategic Objectives:
+{previous_output}
+
+Selected Objective IDs (user selected):
+{selected_objective_ids}
+
+Strategic Themes (for context):
+{strategic_orientation}
+
+Corporate Strategy:
+{corporate_strategy}
+
+IMPORTANT: Only generate capabilities for the objectives with IDs in the selected_objective_ids list. Ignore other objectives.
 
 For each capability, provide:
 - Unique ID (cap_1, cap_2, etc.)
 - Name (clear capability name)
 - Description (what this capability enables)
-- Linked theme ID(s) from strategic orientation
+- Linked objective ID(s) from strategic objectives
 - Capability type (e.g., "GenAI", "Predictive Analytics", "Computer Vision", "Optimization", "Automation")
 - Current maturity level (1-5, where 1=none, 5=advanced)
 - Target maturity level (1-5)
@@ -144,7 +225,7 @@ Return as JSON:
       "id": "cap_1",
       "name": "Conversational AI",
       "description": "Natural language understanding and generation for customer interactions",
-      "theme_ids": ["theme_1"],
+      "objective_ids": ["obj_1"],
       "capability_type": "GenAI",
       "current_maturity": 1,
       "target_maturity": 4,
@@ -161,12 +242,12 @@ Return as JSON:
                             "type": "array",
                             "items": {
                                 "type": "object",
-                                "required": ["id", "name", "description", "theme_ids", "capability_type", "current_maturity", "target_maturity"],
+                                "required": ["id", "name", "description", "objective_ids", "capability_type", "current_maturity", "target_maturity"],
                                 "properties": {
                                     "id": {"type": "string", "pattern": "^cap_[0-9]+$"},
                                     "name": {"type": "string"},
                                     "description": {"type": "string"},
-                                    "theme_ids": {"type": "array", "items": {"type": "string"}},
+                                    "objective_ids": {"type": "array", "items": {"type": "string"}},
                                     "capability_type": {"type": "string"},
                                     "current_maturity": {"type": "integer", "minimum": 1, "maximum": 5},
                                     "target_maturity": {"type": "integer", "minimum": 1, "maximum": 5},
@@ -181,7 +262,7 @@ Return as JSON:
             {
                 "name": "Strategic AI Initiative",
                 "type": "initiative_generation",
-                "order": 3,
+                "order": 4,
                 "description": "Generate specific AI initiatives to build required capabilities",
                 "prompt_template": """For each capability, generate 1-3 specific AI initiatives that will build or enhance that capability.
 
@@ -190,6 +271,9 @@ Capabilities:
 
 Selected Capability IDs (user selected):
 {selected_capability_ids}
+
+Strategic Objectives (for context):
+{strategic_objectives}
 
 Strategic Themes (for context):
 {strategic_orientation}
@@ -260,7 +344,7 @@ Return as JSON:
             {
                 "name": "Business Objectives (KPIs)",
                 "type": "objective_generation",
-                "order": 4,
+                "order": 5,
                 "description": "Define measurable KPIs for each AI initiative",
                 "prompt_template": """For each AI initiative, define 3-5 specific, measurable KPIs that will track the success of the initiative.
 
@@ -339,7 +423,7 @@ Return as JSON:
         
         print(f"✓ Created default template with {len(default_steps)} steps")
         print(f"  Template ID: {default_template.id}")
-        print(f"  Steps: Strategic Orientation → Capability Needs → AI Initiative → KPIs")
+        print(f"  Steps: Strategic Orientation → Strategic Objectives → Capability Needs → AI Initiative → KPIs")
         
     except Exception as e:
         session.rollback()

@@ -62,11 +62,17 @@ const StrategyIntakeForm = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   
-  // Theme selection state for Step 2 (single selection with radio button)
+  // Theme selection state for Step 1 (single selection with radio button)
   const [selectedTheme, setSelectedTheme] = useState('');
   const [availableThemes, setAvailableThemes] = useState([]);
   const [customThemeName, setCustomThemeName] = useState('');
   const [customThemeDescription, setCustomThemeDescription] = useState('');
+  
+  // Objective selection state for Step 2 (single selection with radio button)
+  const [selectedObjective, setSelectedObjective] = useState('');
+  const [availableObjectives, setAvailableObjectives] = useState([]);
+  const [customObjectiveName, setCustomObjectiveName] = useState('');
+  const [customObjectiveDescription, setCustomObjectiveDescription] = useState('');
   
   // Capability selection state for Step 3 (single selection with radio button)
   const [selectedCapability, setSelectedCapability] = useState('');
@@ -88,6 +94,23 @@ const StrategyIntakeForm = () => {
   useEffect(() => {
     loadTemplates();
   }, []);
+
+  // Initialize capabilities from completed step 3 when execution changes
+  useEffect(() => {
+    if (execution && execution.step_executions) {
+      const step3 = execution.step_executions.find(s => s.step_order === 3);
+      if (step3 && step3.status === 'completed' && step3.output_data?.capabilities) {
+        const capabilities = step3.output_data.capabilities;
+        if (availableCapabilities.length === 0 && capabilities.length > 0) {
+          setAvailableCapabilities(capabilities);
+          // Auto-select first capability by default
+          if (capabilities.length > 0) {
+            setSelectedCapability(capabilities[0].id);
+          }
+        }
+      }
+    }
+  }, [execution]);
 
   const loadTemplates = async () => {
     try {
@@ -114,13 +137,42 @@ const StrategyIntakeForm = () => {
     setError(null);
 
     try {
+      // Step 1: Create execution
       const response = await axios.post('/process-templates/executions', {
         template_id: selectedTemplate.id,
         corporate_strategy_input: corporateStrategy
       });
 
-      setExecution(response.data);
-      setSuccess('Process started successfully! Execute steps below.');
+      const newExecution = response.data;
+      setExecution(newExecution);
+      setSuccess('Generating Strategic Orientations...');
+      
+      // Step 2: Auto-execute Step 1 (Strategic Orientation) immediately
+      const stepResponse = await axios.post(
+        `/process-templates/executions/${newExecution.id}/steps/1/execute`,
+        { input_data: null }
+      );
+
+      if (stepResponse.data.success) {
+        // Refresh execution data
+        const execResponse = await axios.get(`/process-templates/executions/${newExecution.id}`);
+        setExecution(execResponse.data);
+        
+        // Extract themes for user selection
+        if (stepResponse.data.step_execution?.output_data?.themes) {
+          const themes = stepResponse.data.step_execution.output_data.themes;
+          setAvailableThemes(themes);
+          // Auto-select first theme by default
+          if (themes.length > 0) {
+            setSelectedTheme(themes[0].id);
+          }
+        }
+        
+        setSuccess('Strategic Orientations generated! Please select one to continue.');
+      } else {
+        setError(stepResponse.data.error || 'Step execution failed');
+      }
+      
       setActiveStep(0);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to start execution');
@@ -154,8 +206,18 @@ const StrategyIntakeForm = () => {
           }
         }
         
-        // If this is step 2 (Strategic Capability Needs), extract capabilities for user selection
-        if (stepOrder === 2 && response.data.step_execution?.output_data?.capabilities) {
+        // If this is step 2 (Strategic Objectives), extract objectives for user selection
+        if (stepOrder === 2 && response.data.step_execution?.output_data?.objectives) {
+          const objectives = response.data.step_execution.output_data.objectives;
+          setAvailableObjectives(objectives);
+          // Auto-select first objective by default
+          if (objectives.length > 0) {
+            setSelectedObjective(objectives[0].id);
+          }
+        }
+        
+        // If this is step 3 (Strategic Capability Needs), extract capabilities for user selection
+        if (stepOrder === 3 && response.data.step_execution?.output_data?.capabilities) {
           const capabilities = response.data.step_execution.output_data.capabilities;
           setAvailableCapabilities(capabilities);
           // Auto-select first capability by default
@@ -164,8 +226,8 @@ const StrategyIntakeForm = () => {
           }
         }
         
-        // If this is step 3 (Strategic AI Initiative), extract initiatives for user selection
-        if (stepOrder === 3 && response.data.step_execution?.output_data?.initiatives) {
+        // If this is step 4 (Strategic AI Initiative), extract initiatives for user selection
+        if (stepOrder === 4 && response.data.step_execution?.output_data?.initiatives) {
           const initiatives = response.data.step_execution.output_data.initiatives;
           setAvailableInitiatives(initiatives);
           // Auto-select all initiatives by default
@@ -186,6 +248,17 @@ const StrategyIntakeForm = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+
+  const handleCapabilityToggle = (capabilityId) => {
+    setSelectedCapabilities(prev => {
+      if (prev.includes(capabilityId)) {
+        return prev.filter(id => id !== capabilityId);
+      } else {
+        return [...prev, capabilityId];
+      }
+    });
   };
 
   const handleInitiativeToggle = (initiativeId) => {
@@ -219,8 +292,28 @@ const StrategyIntakeForm = () => {
       }
       handleExecuteStep(stepOrder, userInput);
     }
-    // For step 3, pass selected capability as user input (single selection)
-    else if (stepOrder === 3 && selectedCapability) {
+    // For step 3, pass selected objective as user input (single selection)
+    else if (stepOrder === 3 && selectedObjective) {
+      let userInput;
+      
+      // If user-defined objective is selected, send custom objective data
+      if (selectedObjective === 'user-defined') {
+        userInput = {
+          selected_objective_ids: ['user-defined'],
+          custom_objective: {
+            name: customObjectiveName,
+            description: customObjectiveDescription
+          }
+        };
+      } else {
+        userInput = {
+          selected_objective_ids: [selectedObjective]  // Send as array with single item
+        };
+      }
+      handleExecuteStep(stepOrder, userInput);
+    }
+    // For step 4, pass selected capability as user input (single selection)
+    else if (stepOrder === 4 && selectedCapability) {
       let userInput;
       
       // If user-defined capability is selected, send custom capability data
@@ -239,8 +332,8 @@ const StrategyIntakeForm = () => {
       }
       handleExecuteStep(stepOrder, userInput);
     }
-    // For step 4, pass selected initiatives as user input (multiple selection)
-    else if (stepOrder === 4 && selectedInitiatives.length > 0) {
+    // For step 5, pass selected initiatives as user input (multiple selection)
+    else if (stepOrder === 5 && selectedInitiatives.length > 0) {
       const userInput = {
         selected_initiative_ids: selectedInitiatives
       };
@@ -358,9 +451,11 @@ const StrategyIntakeForm = () => {
     // First step can always be executed
     if (stepOrder === 1) return true;
     
-    // Other steps require previous step to be completed
+    // Other steps require previous step to be completed.
+    // Some backends/templates may mark a step as "completed" or "validating" while the UI is waiting;
+    // treat both as executable-gate satisfied so users don't get stuck with a disabled EXECUTE STEP.
     const prevStep = execution.step_executions.find(s => s.step_order === stepOrder - 1);
-    return prevStep && prevStep.status === 'completed';
+    return prevStep && (prevStep.status === 'completed' || prevStep.status === 'validating');
   };
 
   const isExecutionComplete = () => {
@@ -467,6 +562,27 @@ const StrategyIntakeForm = () => {
         ) : (
           // Step 2: Execute Steps
           <Box>
+            {/* Success Alert at the top */}
+            {success && (
+              <Alert 
+                severity="success" 
+                sx={{ mb: 3 }}
+                icon={<CheckIcon />}
+                action={
+                  <IconButton
+                    aria-label="close"
+                    color="inherit"
+                    size="small"
+                    onClick={() => setSuccess(null)}
+                  >
+                    ×
+                  </IconButton>
+                }
+              >
+                {success}
+              </Alert>
+            )}
+
             <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Box>
                 <Typography variant="h6">Execution Progress</Typography>
@@ -479,15 +595,28 @@ const StrategyIntakeForm = () => {
                   startIcon={<TraceabilityIcon />}
                   onClick={handleViewTraceability}
                   disabled={!isExecutionComplete()}
+                  variant="outlined"
+                  size="small"
                 >
-                  View Traceability
+                  VIEW TRACEABILITY
                 </Button>
                 <Button
                   startIcon={<DownloadIcon />}
                   onClick={handleExport}
                   disabled={!isExecutionComplete()}
+                  variant="outlined"
+                  size="small"
                 >
-                  Export
+                  EXPORT
+                </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleCreateInitiatives}
+                  disabled={!isExecutionComplete() || loading}
+                  size="small"
+                >
+                  CREATE INITIATIVES
                 </Button>
               </Box>
             </Box>
@@ -504,20 +633,20 @@ const StrategyIntakeForm = () => {
               </CardContent>
             </Card>
 
-            {/* Display Selected Strategic Orientation (if Step 2 or later is active) */}
-            {selectedTheme && availableThemes.length > 0 && (
-              <Card variant="outlined" sx={{ mb: 3, bgcolor: 'primary.50', borderColor: 'primary.main' }}>
+            {/* Display Selected Strategic Objective (if Step 3 or later is active) */}
+            {selectedObjective && availableObjectives.length > 0 && (
+              <Card variant="outlined" sx={{ mb: 3, bgcolor: 'info.50', borderColor: 'info.main' }}>
                 <CardContent>
-                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="primary">
-                    Selected Strategic Orientation:
+                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="info.main">
+                    Selected Strategic Objective:
                   </Typography>
-                  {availableThemes.filter(t => t.id === selectedTheme).map(theme => (
-                    <Box key={theme.id}>
+                  {availableObjectives.filter(o => o.id === selectedObjective).map(objective => (
+                    <Box key={objective.id}>
                       <Typography variant="body2" fontWeight="bold">
-                        {theme.name}
+                        {objective.name}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {theme.description}
+                        {objective.description}
                       </Typography>
                     </Box>
                   ))}
@@ -525,7 +654,7 @@ const StrategyIntakeForm = () => {
               </Card>
             )}
 
-            {/* Display Selected Strategic Capability Need (if Step 3 or later is active) */}
+            {/* Display Selected Strategic Capability (if Step 4 or later is active) */}
             {selectedCapability && availableCapabilities.length > 0 && (
               <Card variant="outlined" sx={{ mb: 3, bgcolor: 'secondary.50', borderColor: 'secondary.main' }}>
                 <CardContent>
@@ -533,9 +662,9 @@ const StrategyIntakeForm = () => {
                     Selected Strategic Capability Need:
                   </Typography>
                   {availableCapabilities.filter(c => c.id === selectedCapability).map(capability => (
-                    <Box key={capability.id}>
+                    <Box key={capability.id} sx={{ mb: 1 }}>
                       <Typography variant="body2" fontWeight="bold">
-                        {capability.name}
+                        • {capability.name}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {capability.description}
@@ -546,47 +675,66 @@ const StrategyIntakeForm = () => {
               </Card>
             )}
 
-            {isExecutionComplete() && (
-              <Alert severity="success" sx={{ mb: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography>All steps completed! Ready to create initiatives.</Typography>
-                  <Button
-                    variant="contained"
-                    onClick={handleCreateInitiatives}
-                    disabled={loading}
-                  >
-                    Create Initiatives
-                  </Button>
-                </Box>
-              </Alert>
-            )}
-
-            <Stepper activeStep={activeStep} orientation="vertical">
+            <Box sx={{ mb: 3 }}>
               {execution.step_executions.map((stepExec, index) => {
                 const status = getStepStatus(stepExec);
                 const isValid = isStepValid(stepExec);
                 const canExecute = canExecuteStep(stepExec.step_order);
 
                 return (
-                  <Step key={stepExec.id} completed={status === 'completed'}>
-                    <StepLabel
-                      error={status === 'failed'}
-                      icon={
-                        status === 'completed' ? (
-                          <CheckIcon color="success" />
-                        ) : status === 'failed' ? (
-                          <ErrorIcon color="error" />
-                        ) : (
-                          index + 1
-                        )
-                      }
+                  <Box 
+                    key={stepExec.id} 
+                    sx={{ 
+                      display: 'flex', 
+                      alignItems: 'flex-start',
+                      mb: 2,
+                      position: 'relative'
+                    }}
+                  >
+                    {/* Step Number Circle */}
+                    <Box
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: '50%',
+                        bgcolor: status === 'completed' ? 'primary.main' : 'grey.300',
+                        color: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold',
+                        mr: 2,
+                        flexShrink: 0
+                      }}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography>{stepExec.step_name}</Typography>
+                      {index + 1}
+                    </Box>
+
+                    {/* Vertical Line Connector */}
+                    {index < execution.step_executions.length - 1 && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          left: 19,
+                          top: 40,
+                          bottom: -16,
+                          width: 2,
+                          bgcolor: 'grey.300'
+                        }}
+                      />
+                    )}
+
+                    {/* Step Content */}
+                    <Box sx={{ flex: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                        <Typography variant="body1" fontWeight="medium">
+                          {stepExec.step_name}
+                        </Typography>
                         <Chip
                           label={status}
                           size="small"
                           color={getStepStatusColor(status)}
+                          sx={{ textTransform: 'lowercase' }}
                         />
                         {status === 'completed' && !isValid && (
                           <Chip
@@ -597,13 +745,16 @@ const StrategyIntakeForm = () => {
                           />
                         )}
                       </Box>
-                    </StepLabel>
-                    <StepContent>
-                      <Box sx={{ mb: 2 }}>
-                        {/* Show theme selection for Step 2 if Step 1 is completed - RADIO BUTTONS */}
-                        {stepExec.step_order === 2 && status === 'pending' && availableThemes.length > 0 && (
-                          <Card variant="outlined" sx={{ mb: 2, p: 2 }}>
-                            <Typography variant="subtitle2" gutterBottom>
+
+                      {/* Step Actions */}
+                      <Box>
+                        {/* Show Strategic Orientation selection for Step 1 when completed - RADIO BUTTONS */}
+                        {stepExec.step_order === 1 && status === 'completed' && availableThemes.length > 0 && (
+                          <Card variant="outlined" sx={{ mb: 2, p: 2, bgcolor: 'primary.50', borderColor: 'primary.main' }}>
+                            <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="primary">
+                              Strategic Orientation:
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
                               Select ONE Strategic Orientation to develop capabilities for:
                             </Typography>
                             <RadioGroup
@@ -670,8 +821,78 @@ const StrategyIntakeForm = () => {
                           </Card>
                         )}
 
-                        {/* Show capability selection for Step 3 if Step 2 is completed - RADIO BUTTONS */}
-                        {stepExec.step_order === 3 && status === 'pending' && availableCapabilities.length > 0 && (
+                        {/* Show objective selection for Step 3 if Step 2 is completed - RADIO BUTTONS */}
+                        {stepExec.step_order === 3 && status === 'pending' && availableObjectives.length > 0 && (
+                          <Card variant="outlined" sx={{ mb: 2, p: 2 }}>
+                            <Typography variant="subtitle2" gutterBottom>
+                              Select ONE Strategic Objective to develop capabilities for:
+                            </Typography>
+                            <RadioGroup
+                              value={selectedObjective}
+                              onChange={(e) => setSelectedObjective(e.target.value)}
+                            >
+                              {availableObjectives.map((objective) => (
+                                <FormControlLabel
+                                  key={objective.id}
+                                  value={objective.id}
+                                  control={<Radio />}
+                                  label={
+                                    <Box>
+                                      <Typography variant="body2" fontWeight="bold">
+                                        {objective.name}
+                                      </Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        {objective.description}
+                                      </Typography>
+                                    </Box>
+                                  }
+                                />
+                              ))}
+                              <FormControlLabel
+                                value="user-defined"
+                                control={<Radio />}
+                                label={
+                                  <Box>
+                                    <Typography variant="body2" fontWeight="bold">
+                                      User Defined
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Define your own custom strategic objective
+                                    </Typography>
+                                  </Box>
+                                }
+                              />
+                            </RadioGroup>
+                            
+                            {/* Show custom input fields when "User Defined" is selected */}
+                            {selectedObjective === 'user-defined' && (
+                              <Box sx={{ mt: 2, pl: 4 }}>
+                                <TextField
+                                  fullWidth
+                                  label="Strategic Objective Name"
+                                  value={customObjectiveName}
+                                  onChange={(e) => setCustomObjectiveName(e.target.value)}
+                                  placeholder="e.g., Achieve 95% Customer Satisfaction Score"
+                                  sx={{ mb: 2 }}
+                                  required
+                                />
+                                <TextField
+                                  fullWidth
+                                  multiline
+                                  rows={3}
+                                  label="Strategic Objective Description"
+                                  value={customObjectiveDescription}
+                                  onChange={(e) => setCustomObjectiveDescription(e.target.value)}
+                                  placeholder="Describe your custom strategic objective and how it aligns with your strategic orientation..."
+                                  required
+                                />
+                              </Box>
+                            )}
+                          </Card>
+                        )}
+
+                        {/* Show capability selection for Step 4 if Step 3 is completed - RADIO BUTTONS */}
+                        {stepExec.step_order === 4 && status === 'pending' && availableCapabilities.length > 0 && (
                           <Card variant="outlined" sx={{ mb: 2, p: 2 }}>
                             <Typography variant="subtitle2" gutterBottom>
                               Select ONE Strategic Capability Need to generate initiatives for:
@@ -706,7 +927,7 @@ const StrategyIntakeForm = () => {
                                       User Defined
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
-                                      Define your own custom strategic capability need
+                                      Define your own custom strategic capability
                                     </Typography>
                                   </Box>
                                 }
@@ -718,10 +939,10 @@ const StrategyIntakeForm = () => {
                               <Box sx={{ mt: 2, pl: 4 }}>
                                 <TextField
                                   fullWidth
-                                  label="Strategic Capability Need Name"
+                                  label="Strategic Capability Name"
                                   value={customCapabilityName}
                                   onChange={(e) => setCustomCapabilityName(e.target.value)}
-                                  placeholder="e.g., Advanced Predictive Analytics"
+                                  placeholder="e.g., Advanced Data Analytics"
                                   sx={{ mb: 2 }}
                                   required
                                 />
@@ -729,10 +950,10 @@ const StrategyIntakeForm = () => {
                                   fullWidth
                                   multiline
                                   rows={3}
-                                  label="Strategic Capability Need Description"
+                                  label="Strategic Capability Description"
                                   value={customCapabilityDescription}
                                   onChange={(e) => setCustomCapabilityDescription(e.target.value)}
-                                  placeholder="Describe your custom strategic capability need and how it supports your strategic orientation..."
+                                  placeholder="Describe your custom strategic capability and how it aligns with your strategic objective..."
                                   required
                                 />
                               </Box>
@@ -740,8 +961,8 @@ const StrategyIntakeForm = () => {
                           </Card>
                         )}
 
-                        {/* Show initiative selection for Step 4 if Step 3 is completed - CHECKBOXES */}
-                        {stepExec.step_order === 4 && status === 'pending' && availableInitiatives.length > 0 && (
+                        {/* Show initiative selection for Step 5 if Step 4 is completed - CHECKBOXES */}
+                        {stepExec.step_order === 5 && status === 'pending' && availableInitiatives.length > 0 && (
                           <Card variant="outlined" sx={{ mb: 2, p: 2 }}>
                             <Typography variant="subtitle2" gutterBottom>
                               Select Strategic AI Initiatives to generate KPIs for:
@@ -778,7 +999,7 @@ const StrategyIntakeForm = () => {
                             startIcon={loading ? <CircularProgress size={20} /> : <ExecuteIcon />}
                             onClick={() => {
                               // For steps with selection, use the selection handler
-                              if (stepExec.step_order === 2 || stepExec.step_order === 3 || stepExec.step_order === 4) {
+                              if (stepExec.step_order === 2 || stepExec.step_order === 3 || stepExec.step_order === 4 || stepExec.step_order === 5) {
                                 handleExecuteStepWithSelection(stepExec.step_order);
                               } else {
                                 // For step 1, execute directly
@@ -790,14 +1011,28 @@ const StrategyIntakeForm = () => {
                               !canExecute || 
                               (stepExec.step_order === 2 && availableThemes.length > 0 && !selectedTheme) ||
                               (stepExec.step_order === 2 && selectedTheme === 'user-defined' && (!customThemeName.trim() || !customThemeDescription.trim())) ||
-                              (stepExec.step_order === 3 && availableCapabilities.length > 0 && !selectedCapability) ||
-                              (stepExec.step_order === 3 && selectedCapability === 'user-defined' && (!customCapabilityName.trim() || !customCapabilityDescription.trim())) ||
-                              (stepExec.step_order === 4 && availableInitiatives.length > 0 && selectedInitiatives.length === 0)
+                              (stepExec.step_order === 3 && availableObjectives.length > 0 && !selectedObjective) ||
+                              (stepExec.step_order === 3 && selectedObjective === 'user-defined' && (!customObjectiveName.trim() || !customObjectiveDescription.trim())) ||
+                              // Step 4 (Strategic Capability Needs) requires capability selected
+                              (stepExec.step_order === 4 && availableCapabilities.length > 0 && !selectedCapability) ||
+                              (stepExec.step_order === 4 && selectedCapability === 'user-defined' && (!customCapabilityName.trim() || !customCapabilityDescription.trim())) ||
+                              // Step 5 (Strategic AI Initiatives) requires at least one initiative selected
+                              (stepExec.step_order === 5 && availableInitiatives.length > 0 && selectedInitiatives.length === 0)
                             }
+                            size="medium"
                           >
-                            {loading ? 'Executing...' : 'Execute Step'}
+                            {loading ? 'Executing...' : 'EXECUTE STEP'}
                           </Button>
                         )}
+
+                        {/*
+                          Guardrail for the specific UX issue reported:
+                          some templates label "Strategic Capability Needs" as step 3, and at that moment we need to
+                          allow executing as soon as a Strategic Objective is selected.
+                          In those cases `step_order` for capability needs is still 3, and the prerequisites are:
+                          - previous step completed (handled by canExecute)
+                          - selectedObjective set (handled above)
+                        */}
 
                         {status === 'in_progress' && (
                           <Box>
@@ -809,37 +1044,136 @@ const StrategyIntakeForm = () => {
                         )}
 
                         {status === 'completed' && (
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button
-                              startIcon={<ViewIcon />}
-                              onClick={() => handleViewOutput(stepExec)}
-                            >
-                              View Output
-                            </Button>
-                            {!isValid && (
-                              <Button
-                                startIcon={<RepairIcon />}
-                                onClick={() => handleRepairStep(stepExec.id)}
-                                color="warning"
-                                disabled={loading}
-                              >
-                                Repair
-                              </Button>
+                          <Box>
+                            {/* Show capability selection for completed Step 3 (Strategic Capability Needs) - this allows user to change selection */}
+                            {stepExec.step_order === 3 && stepExec.output_data?.capabilities && stepExec.output_data.capabilities.length > 0 && (
+                              <Box>
+                                <Card variant="outlined" sx={{ mb: 2, p: 2, bgcolor: 'warning.50' }}>
+                                  <Typography variant="subtitle2" gutterBottom>
+                                    Select ONE Strategic Capability Need to generate initiatives for:
+                                  </Typography>
+                                  <RadioGroup
+                                    value={selectedCapability}
+                                    onChange={(e) => {
+                                      // Initialize availableCapabilities if not already set
+                                      if (availableCapabilities.length === 0) {
+                                        setAvailableCapabilities(stepExec.output_data.capabilities);
+                                      }
+                                      setSelectedCapability(e.target.value);
+                                    }}
+                                  >
+                                    {stepExec.output_data.capabilities.map((capability) => (
+                                      <FormControlLabel
+                                        key={capability.id}
+                                        value={capability.id}
+                                        control={<Radio />}
+                                        label={
+                                          <Box>
+                                            <Typography variant="body2" fontWeight="bold">
+                                              {capability.name}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                              {capability.description}
+                                            </Typography>
+                                          </Box>
+                                        }
+                                      />
+                                    ))}
+                                    <FormControlLabel
+                                      value="user-defined"
+                                      control={<Radio />}
+                                      label={
+                                        <Box>
+                                          <Typography variant="body2" fontWeight="bold">
+                                            User Defined
+                                          </Typography>
+                                          <Typography variant="caption" color="text.secondary">
+                                            Define your own custom strategic capability
+                                          </Typography>
+                                        </Box>
+                                      }
+                                    />
+                                  </RadioGroup>
+                                  
+                                  {/* Show custom input fields when "User Defined" is selected */}
+                                  {selectedCapability === 'user-defined' && (
+                                    <Box sx={{ mt: 2, pl: 4 }}>
+                                      <TextField
+                                        fullWidth
+                                        label="Strategic Capability Name"
+                                        value={customCapabilityName}
+                                        onChange={(e) => setCustomCapabilityName(e.target.value)}
+                                        placeholder="e.g., Advanced Data Analytics"
+                                        sx={{ mb: 2 }}
+                                        required
+                                      />
+                                      <TextField
+                                        fullWidth
+                                        multiline
+                                        rows={3}
+                                        label="Strategic Capability Description"
+                                        value={customCapabilityDescription}
+                                        onChange={(e) => setCustomCapabilityDescription(e.target.value)}
+                                        placeholder="Describe your custom strategic capability and how it aligns with your strategic objective..."
+                                        required
+                                      />
+                                    </Box>
+                                  )}
+                                </Card>
+                                
+                                {/* Add EXECUTE STEP button for next step after capability selection */}
+                                {execution.step_executions.find(s => s.step_order === 4) && (
+                                  <Button
+                                    variant="contained"
+                                    startIcon={loading ? <CircularProgress size={20} /> : <ExecuteIcon />}
+                                    onClick={() => handleExecuteStepWithSelection(4)}
+                                    disabled={
+                                      loading || 
+                                      !selectedCapability ||
+                                      (selectedCapability === 'user-defined' && (!customCapabilityName.trim() || !customCapabilityDescription.trim()))
+                                    }
+                                    size="medium"
+                                    sx={{ mb: 2 }}
+                                  >
+                                    {loading ? 'Executing...' : 'EXECUTE NEXT STEP (Strategic AI Initiative)'}
+                                  </Button>
+                                )}
+                              </Box>
                             )}
+                            
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <Button
+                                startIcon={<ViewIcon />}
+                                onClick={() => handleViewOutput(stepExec)}
+                                size="small"
+                              >
+                                VIEW OUTPUT
+                              </Button>
+                              {!isValid && (
+                                <Button
+                                  startIcon={<RepairIcon />}
+                                  onClick={() => handleRepairStep(stepExec.id)}
+                                  color="warning"
+                                  disabled={loading}
+                                >
+                                  Repair
+                                </Button>
+                              )}
+                            </Box>
                           </Box>
                         )}
 
                         {status === 'failed' && (
-                          <Alert severity="error">
+                          <Alert severity="error" sx={{ mt: 1 }}>
                             Step execution failed. Please try again or contact support.
                           </Alert>
                         )}
                       </Box>
-                    </StepContent>
-                  </Step>
+                    </Box>
+                  </Box>
                 );
               })}
-            </Stepper>
+            </Box>
           </Box>
         )}
       </Paper>
