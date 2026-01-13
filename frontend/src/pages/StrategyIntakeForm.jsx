@@ -468,7 +468,11 @@ const StrategyIntakeForm = () => {
 
   const isExecutionComplete = () => {
     if (!execution) return false;
-    return execution.status === 'completed';
+    // Check if all steps are completed (or validating)
+    const allStepsComplete = execution.step_executions.every(
+      step => step.status === 'completed' || step.status === 'validating'
+    );
+    return allStepsComplete;
   };
 
   return (
@@ -1133,6 +1137,23 @@ const StrategyIntakeForm = () => {
                               {loading ? 'Executing...' : 'EXECUTE STEP'}
                             </Button>
                           </Card>
+                        )}
+
+                        {/* Show CREATE INITIATIVES button after Step 5 (KPIs) completes */}
+                        {stepExec.step_order === 5 && status === 'completed' && (
+                          <Box sx={{ mt: 2 }}>
+                            <Button
+                              variant="contained"
+                              color="success"
+                              size="large"
+                              onClick={handleCreateInitiatives}
+                              disabled={loading}
+                              fullWidth
+                              startIcon={<CheckIcon />}
+                            >
+                              {loading ? 'Creating Initiatives...' : 'CREATE INITIATIVES'}
+                            </Button>
+                          </Box>
                         )}
 
                         {/* Only show EXECUTE STEP button for Step 1 (all other steps have buttons inside their boxes) */}
