@@ -839,10 +839,13 @@ const StrategyIntakeForm = () => {
                           </Card>
                         )}
 
-                        {/* Show objective selection for Step 3 if Step 2 is completed - RADIO BUTTONS */}
-                        {stepExec.step_order === 3 && status === 'pending' && availableObjectives.length > 0 && (
-                          <Card variant="outlined" sx={{ mb: 2, p: 2 }}>
-                            <Typography variant="subtitle2" gutterBottom>
+                        {/* Show objective selection for Step 2 when completed - RADIO BUTTONS */}
+                        {stepExec.step_order === 2 && status === 'completed' && availableObjectives.length > 0 && (
+                          <Card variant="outlined" sx={{ mb: 2, p: 2, bgcolor: 'info.50', borderColor: 'info.main' }}>
+                            <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="info.main">
+                              Strategic Objectives:
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
                               Select ONE Strategic Objective to develop capabilities for:
                             </Typography>
                             <RadioGroup
@@ -906,13 +909,34 @@ const StrategyIntakeForm = () => {
                                 />
                               </Box>
                             )}
+                            
+                            {/* EXECUTE STEP button inside Strategic Objectives box */}
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              startIcon={loading ? <CircularProgress size={20} /> : <ExecuteIcon />}
+                              onClick={() => handleExecuteStepWithSelection(3)}
+                              disabled={
+                                loading || 
+                                !selectedObjective ||
+                                (selectedObjective === 'user-defined' && (!customObjectiveName.trim() || !customObjectiveDescription.trim()))
+                              }
+                              size="medium"
+                              sx={{ mt: 2 }}
+                              fullWidth
+                            >
+                              {loading ? 'Executing...' : 'EXECUTE STEP'}
+                            </Button>
                           </Card>
                         )}
 
-                        {/* Show capability selection for Step 4 if Step 3 is completed - RADIO BUTTONS */}
-                        {stepExec.step_order === 4 && status === 'pending' && availableCapabilities.length > 0 && (
-                          <Card variant="outlined" sx={{ mb: 2, p: 2 }}>
-                            <Typography variant="subtitle2" gutterBottom>
+                        {/* Show capability selection for Step 3 when completed - RADIO BUTTONS */}
+                        {stepExec.step_order === 3 && status === 'completed' && availableCapabilities.length > 0 && (
+                          <Card variant="outlined" sx={{ mb: 2, p: 2, bgcolor: 'secondary.50', borderColor: 'secondary.main' }}>
+                            <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="secondary">
+                              Strategic Capability Needs:
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
                               Select ONE Strategic Capability Need to generate initiatives for:
                             </Typography>
                             <RadioGroup
@@ -976,13 +1000,34 @@ const StrategyIntakeForm = () => {
                                 />
                               </Box>
                             )}
+                            
+                            {/* EXECUTE STEP button inside Strategic Capability Needs box */}
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              startIcon={loading ? <CircularProgress size={20} /> : <ExecuteIcon />}
+                              onClick={() => handleExecuteStepWithSelection(4)}
+                              disabled={
+                                loading || 
+                                !selectedCapability ||
+                                (selectedCapability === 'user-defined' && (!customCapabilityName.trim() || !customCapabilityDescription.trim()))
+                              }
+                              size="medium"
+                              sx={{ mt: 2 }}
+                              fullWidth
+                            >
+                              {loading ? 'Executing...' : 'EXECUTE STEP'}
+                            </Button>
                           </Card>
                         )}
 
-                        {/* Show initiative selection for Step 5 if Step 4 is completed - CHECKBOXES */}
-                        {stepExec.step_order === 5 && status === 'pending' && availableInitiatives.length > 0 && (
-                          <Card variant="outlined" sx={{ mb: 2, p: 2 }}>
-                            <Typography variant="subtitle2" gutterBottom>
+                        {/* Show initiative selection for Step 4 when completed - CHECKBOXES */}
+                        {stepExec.step_order === 4 && status === 'completed' && availableInitiatives.length > 0 && (
+                          <Card variant="outlined" sx={{ mb: 2, p: 2, bgcolor: 'success.50', borderColor: 'success.main' }}>
+                            <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="success.main">
+                              Strategic AI Initiatives:
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
                               Select Strategic AI Initiatives to generate KPIs for:
                             </Typography>
                             <FormGroup>
@@ -1008,34 +1053,33 @@ const StrategyIntakeForm = () => {
                                 />
                               ))}
                             </FormGroup>
+                            
+                            {/* EXECUTE STEP button inside Strategic AI Initiatives box */}
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              startIcon={loading ? <CircularProgress size={20} /> : <ExecuteIcon />}
+                              onClick={() => handleExecuteStepWithSelection(5)}
+                              disabled={
+                                loading || 
+                                selectedInitiatives.length === 0
+                              }
+                              size="medium"
+                              sx={{ mt: 2 }}
+                              fullWidth
+                            >
+                              {loading ? 'Executing...' : 'EXECUTE STEP'}
+                            </Button>
                           </Card>
                         )}
 
-                        {/* Only show EXECUTE STEP button for steps other than Step 2 (Strategic Orientation is handled inside its box) */}
-                        {status === 'pending' && stepExec.step_order !== 2 && (
+                        {/* Only show EXECUTE STEP button for Step 1 (all other steps have buttons inside their boxes) */}
+                        {status === 'pending' && stepExec.step_order === 1 && (
                           <Button
                             variant="contained"
                             startIcon={loading ? <CircularProgress size={20} /> : <ExecuteIcon />}
-                            onClick={() => {
-                              // For steps with selection, use the selection handler
-                              if (stepExec.step_order === 3 || stepExec.step_order === 4 || stepExec.step_order === 5) {
-                                handleExecuteStepWithSelection(stepExec.step_order);
-                              } else {
-                                // For step 1, execute directly
-                                handleExecuteStep(stepExec.step_order);
-                              }
-                            }}
-                            disabled={
-                              loading || 
-                              !canExecute || 
-                              (stepExec.step_order === 3 && availableObjectives.length > 0 && !selectedObjective) ||
-                              (stepExec.step_order === 3 && selectedObjective === 'user-defined' && (!customObjectiveName.trim() || !customObjectiveDescription.trim())) ||
-                              // Step 4 (Strategic Capability Needs) requires capability selected
-                              (stepExec.step_order === 4 && availableCapabilities.length > 0 && !selectedCapability) ||
-                              (stepExec.step_order === 4 && selectedCapability === 'user-defined' && (!customCapabilityName.trim() || !customCapabilityDescription.trim())) ||
-                              // Step 5 (Strategic AI Initiatives) requires at least one initiative selected
-                              (stepExec.step_order === 5 && availableInitiatives.length > 0 && selectedInitiatives.length === 0)
-                            }
+                            onClick={() => handleExecuteStep(stepExec.step_order)}
+                            disabled={loading || !canExecute}
                             size="medium"
                           >
                             {loading ? 'Executing...' : 'EXECUTE STEP'}
