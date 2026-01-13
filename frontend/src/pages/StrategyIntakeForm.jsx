@@ -208,8 +208,10 @@ const StrategyIntakeForm = () => {
         if (stepOrder === 2 && response.data.step_execution?.output_data?.objectives) {
           const objectives = response.data.step_execution.output_data.objectives;
           setAvailableObjectives(objectives);
-          // Auto-select all objectives by default
-          setSelectedObjectives(objectives.map(o => o.id));
+          // Auto-select first objective by default (single selection)
+          if (objectives.length > 0) {
+            setSelectedObjectives([objectives[0].id]);
+          }
         }
         
         // If this is step 3 (Strategic Capability Needs), extract capabilities for user selection
@@ -296,11 +298,24 @@ const StrategyIntakeForm = () => {
       }
       handleExecuteStep(stepOrder, userInput);
     }
-    // For step 3, pass selected objectives as user input (multiple selection)
+    // For step 3, pass selected objective as user input (single selection)
     else if (stepOrder === 3 && selectedObjectives.length > 0) {
-      const userInput = {
-        selected_objective_ids: selectedObjectives
-      };
+      let userInput;
+      
+      // If user-defined objective is selected, send custom objective data
+      if (selectedObjectives[0] === 'user-defined') {
+        userInput = {
+          selected_objective_ids: ['user-defined'],
+          custom_objective: {
+            name: customObjectiveName,
+            description: customObjectiveDescription
+          }
+        };
+      } else {
+        userInput = {
+          selected_objective_ids: selectedObjectives
+        };
+      }
       handleExecuteStep(stepOrder, userInput);
     }
     // For step 4, pass selected capabilities as user input (multiple selection)
@@ -796,25 +811,24 @@ const StrategyIntakeForm = () => {
                           </Card>
                         )}
 
-                        {/* Show objective selection for Step 2 when completed - CHECKBOXES */}
+                        {/* Show objective selection for Step 2 when completed - RADIO BUTTONS (single selection) */}
                         {stepExec.step_order === 2 && status === 'completed' && availableObjectives.length > 0 && (
                           <Card variant="outlined" sx={{ mb: 2, p: 2, bgcolor: 'info.50', borderColor: 'info.main' }}>
                             <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="info.main">
-                              Strategic Objectives:
+                              Strategic Objective:
                             </Typography>
                             <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-                              Select Strategic Objectives to develop capabilities for:
+                              Select ONE Strategic Objective to develop capabilities for:
                             </Typography>
-                            <FormGroup>
+                            <RadioGroup
+                              value={selectedObjectives.length > 0 ? selectedObjectives[0] : ''}
+                              onChange={(e) => setSelectedObjectives([e.target.value])}
+                            >
                               {availableObjectives.map((objective) => (
                                 <FormControlLabel
                                   key={objective.id}
-                                  control={
-                                    <Checkbox
-                                      checked={selectedObjectives.includes(objective.id)}
-                                      onChange={() => handleObjectiveToggle(objective.id)}
-                                    />
-                                  }
+                                  value={objective.id}
+                                  control={<Radio />}
                                   label={
                                     <Box>
                                       <Typography variant="body2" fontWeight="bold">
@@ -827,7 +841,46 @@ const StrategyIntakeForm = () => {
                                   }
                                 />
                               ))}
-                            </FormGroup>
+                              <FormControlLabel
+                                value="user-defined"
+                                control={<Radio />}
+                                label={
+                                  <Box>
+                                    <Typography variant="body2" fontWeight="bold">
+                                      User Defined
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Define your own custom strategic objective
+                                    </Typography>
+                                  </Box>
+                                }
+                              />
+                            </RadioGroup>
+                            
+                            {/* Show custom input fields when "User Defined" is selected */}
+                            {selectedObjectives.length > 0 && selectedObjectives[0] === 'user-defined' && (
+                              <Box sx={{ mt: 2, pl: 4 }}>
+                                <TextField
+                                  fullWidth
+                                  label="Strategic Objective Name"
+                                  value={customObjectiveName}
+                                  onChange={(e) => setCustomObjectiveName(e.target.value)}
+                                  placeholder="e.g., Increase Customer Retention by 25%"
+                                  sx={{ mb: 2 }}
+                                  required
+                                />
+                                <TextField
+                                  fullWidth
+                                  multiline
+                                  rows={3}
+                                  label="Strategic Objective Description"
+                                  value={customObjectiveDescription}
+                                  onChange={(e) => setCustomObjectiveDescription(e.target.value)}
+                                  placeholder="Describe your custom strategic objective and how it aligns with your strategic orientation..."
+                                  required
+                                />
+                              </Box>
+                            )}
                             
                             {/* EXECUTE STEP button inside Strategic Objectives box */}
                             <Button
@@ -835,7 +888,11 @@ const StrategyIntakeForm = () => {
                               color="primary"
                               startIcon={loading ? <CircularProgress size={20} /> : <ExecuteIcon />}
                               onClick={() => handleExecuteStepWithSelection(3)}
-                              disabled={loading || selectedObjectives.length === 0}
+                              disabled={
+                                loading || 
+                                selectedObjectives.length === 0 ||
+                                (selectedObjectives[0] === 'user-defined' && (!customObjectiveName.trim() || !customObjectiveDescription.trim()))
+                              }
                               size="medium"
                               sx={{ mt: 2 }}
                               fullWidth
