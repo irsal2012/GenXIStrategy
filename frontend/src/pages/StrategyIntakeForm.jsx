@@ -818,6 +818,24 @@ const StrategyIntakeForm = () => {
                                 />
                               </Box>
                             )}
+                            
+                            {/* EXECUTE STEP button inside Strategic Orientation box */}
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              startIcon={loading ? <CircularProgress size={20} /> : <ExecuteIcon />}
+                              onClick={() => handleExecuteStepWithSelection(2)}
+                              disabled={
+                                loading || 
+                                !selectedTheme ||
+                                (selectedTheme === 'user-defined' && (!customThemeName.trim() || !customThemeDescription.trim()))
+                              }
+                              size="medium"
+                              sx={{ mt: 2 }}
+                              fullWidth
+                            >
+                              {loading ? 'Executing...' : 'EXECUTE STEP'}
+                            </Button>
                           </Card>
                         )}
 
@@ -993,13 +1011,14 @@ const StrategyIntakeForm = () => {
                           </Card>
                         )}
 
-                        {status === 'pending' && (
+                        {/* Only show EXECUTE STEP button for steps other than Step 2 (Strategic Orientation is handled inside its box) */}
+                        {status === 'pending' && stepExec.step_order !== 2 && (
                           <Button
                             variant="contained"
                             startIcon={loading ? <CircularProgress size={20} /> : <ExecuteIcon />}
                             onClick={() => {
                               // For steps with selection, use the selection handler
-                              if (stepExec.step_order === 2 || stepExec.step_order === 3 || stepExec.step_order === 4 || stepExec.step_order === 5) {
+                              if (stepExec.step_order === 3 || stepExec.step_order === 4 || stepExec.step_order === 5) {
                                 handleExecuteStepWithSelection(stepExec.step_order);
                               } else {
                                 // For step 1, execute directly
@@ -1009,8 +1028,6 @@ const StrategyIntakeForm = () => {
                             disabled={
                               loading || 
                               !canExecute || 
-                              (stepExec.step_order === 2 && availableThemes.length > 0 && !selectedTheme) ||
-                              (stepExec.step_order === 2 && selectedTheme === 'user-defined' && (!customThemeName.trim() || !customThemeDescription.trim())) ||
                               (stepExec.step_order === 3 && availableObjectives.length > 0 && !selectedObjective) ||
                               (stepExec.step_order === 3 && selectedObjective === 'user-defined' && (!customObjectiveName.trim() || !customObjectiveDescription.trim())) ||
                               // Step 4 (Strategic Capability Needs) requires capability selected
