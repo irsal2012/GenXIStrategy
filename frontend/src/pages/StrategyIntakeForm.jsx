@@ -611,27 +611,6 @@ const StrategyIntakeForm = () => {
               </CardContent>
             </Card>
 
-            {/* Display Selected Strategic Objectives (if Step 3 or later is active) */}
-            {selectedObjectives.length > 0 && availableObjectives.length > 0 && (
-              <Card variant="outlined" sx={{ mb: 3, bgcolor: 'info.50', borderColor: 'info.main' }}>
-                <CardContent>
-                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="info.main">
-                    Selected Strategic Objectives:
-                  </Typography>
-                  {availableObjectives.filter(o => selectedObjectives.includes(o.id)).map(objective => (
-                    <Box key={objective.id} sx={{ mb: 1 }}>
-                      <Typography variant="body2" fontWeight="bold">
-                        • {objective.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {objective.description}
-                      </Typography>
-                    </Box>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
             {/* Display Selected Strategic Capabilities (if Step 4 or later is active) */}
             {selectedCapabilities.length > 0 && availableCapabilities.length > 0 && (
               <Card variant="outlined" sx={{ mb: 3, bgcolor: 'secondary.50', borderColor: 'secondary.main' }}>
