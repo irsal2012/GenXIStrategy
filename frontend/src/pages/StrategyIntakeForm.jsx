@@ -641,23 +641,98 @@ const StrategyIntakeForm = () => {
               </CardContent>
             </Card>
 
-            {/* Display Selected Strategic Capabilities (if Step 4 or later is active) */}
-            {selectedCapabilities.length > 0 && availableCapabilities.length > 0 && (
+            {/* Display Selected Strategic Orientation */}
+            {selectedTheme && availableThemes.length > 0 && execution.step_executions.some(s => s.step_order >= 2 && s.status !== 'pending') && (
+              <Card variant="outlined" sx={{ mb: 3, bgcolor: 'primary.50', borderColor: 'primary.main' }}>
+                <CardContent>
+                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="primary">
+                    Selected Strategic Orientation:
+                  </Typography>
+                  {selectedTheme === 'user-defined' ? (
+                    <Box>
+                      <Typography variant="body2" fontWeight="bold">
+                        • {customThemeName}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {customThemeDescription}
+                      </Typography>
+                    </Box>
+                  ) : (
+                    availableThemes.filter(t => t.id === selectedTheme).map(theme => (
+                      <Box key={theme.id}>
+                        <Typography variant="body2" fontWeight="bold">
+                          • {theme.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {theme.description}
+                        </Typography>
+                      </Box>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Display Selected Strategic Objective */}
+            {selectedObjectives.length > 0 && availableObjectives.length > 0 && execution.step_executions.some(s => s.step_order >= 3 && s.status !== 'pending') && (
+              <Card variant="outlined" sx={{ mb: 3, bgcolor: 'info.50', borderColor: 'info.main' }}>
+                <CardContent>
+                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="info.main">
+                    Selected Strategic Objective:
+                  </Typography>
+                  {selectedObjectives[0] === 'user-defined' ? (
+                    <Box>
+                      <Typography variant="body2" fontWeight="bold">
+                        • {customObjectiveName}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {customObjectiveDescription}
+                      </Typography>
+                    </Box>
+                  ) : (
+                    availableObjectives.filter(o => selectedObjectives.includes(o.id)).map(objective => (
+                      <Box key={objective.id}>
+                        <Typography variant="body2" fontWeight="bold">
+                          • {objective.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {objective.description}
+                        </Typography>
+                      </Box>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Display Selected Strategic Capability Need */}
+            {selectedCapabilities.length > 0 && availableCapabilities.length > 0 && execution.step_executions.some(s => s.step_order >= 4 && s.status !== 'pending') && (
               <Card variant="outlined" sx={{ mb: 3, bgcolor: 'secondary.50', borderColor: 'secondary.main' }}>
                 <CardContent>
                   <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="secondary">
-                    Selected Strategic Capability Needs:
+                    Selected Strategic Capability Need:
                   </Typography>
-                  {availableCapabilities.filter(c => selectedCapabilities.includes(c.id)).map(capability => (
-                    <Box key={capability.id} sx={{ mb: 1 }}>
+                  {selectedCapabilities[0] === 'user-defined' ? (
+                    <Box>
                       <Typography variant="body2" fontWeight="bold">
-                        • {capability.name}
+                        • {customCapabilityName}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {capability.description}
+                        {customCapabilityDescription}
                       </Typography>
                     </Box>
-                  ))}
+                  ) : (
+                    availableCapabilities.filter(c => selectedCapabilities.includes(c.id)).map(capability => (
+                      <Box key={capability.id}>
+                        <Typography variant="body2" fontWeight="bold">
+                          • {capability.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {capability.description}
+                        </Typography>
+                      </Box>
+                    ))
+                  )}
                 </CardContent>
               </Card>
             )}
